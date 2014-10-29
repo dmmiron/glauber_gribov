@@ -1,3 +1,4 @@
+
 #include <cstring>
 using namespace std;
 
@@ -24,19 +25,20 @@ void runSweep(Int_t n,
 
     char fname[1000];
     if (sigwidth_inc > 0 && b_step > 0) {
-        while (b < b_end) {
+        //while (b < b_end) {
             while (sigwidth < sigwidth_max)
             {
                 printf("hello\n");
                 sprintf(fname, "%s/%s_%s_sigwidth=%f.root", dir, sysA, sysB, sigwidth);
-                runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, fname);
+                //runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname);
+                runAndSaveNtuple(n, sysA, sysB, signn, sigwidth, mind, fname);
                 sigwidth += sigwidth_inc;
             } 
-            b += b_step;
-        }
+        //    b += b_step;
+        //}
     }
 }
-
+/*
 void runAndSaveNtupleFixedbRange(const Int_t n,
         const char *sysA,
         const char *sysB,
@@ -47,9 +49,6 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
         const Double_t bmax, 
         const char *fname)
 {
-    gROOT->ProcessLine("gSystem->Load(\"libMathMore\")");
-    gROOT->ProcessLine(".L runglauber_v2.0.C+");
-
     TGlauberMC *mcg=new TGlauberMC(sysA,sysB,signn,sigwidth);
     mcg->SetMinDistance(mind);
     mcg->SetBmin(bmin);
@@ -62,4 +61,4 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
 }
 void makePlots(char* param, char* dir) {
 }
-
+*/
