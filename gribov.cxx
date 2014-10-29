@@ -1,9 +1,10 @@
-
+#include <runglauber_v2.0.h>
 #include <cstring>
 using namespace std;
 
 void gribov() {
     gROOT->ProcessLine("gSystem->Load(\"libMathMore\")");
+    printf("gSystem->Load(\"libMathMore\")\n");
     gROOT->ProcessLine(".L runglauber_v2.0.C+");
 }
 
@@ -25,20 +26,22 @@ void runSweep(Int_t n,
 
     char fname[1000];
     if (sigwidth_inc > 0 && b_step > 0) {
-        //while (b < b_end) {
+        while (b < b_end) {
+            printf("%f, %f, %f, %f\n", b, b_start, b_end, b_step);
             while (sigwidth < sigwidth_max)
             {
                 printf("hello\n");
-                sprintf(fname, "%s/%s_%s_sigwidth=%f.root", dir, sysA, sysB, sigwidth);
-                //runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname);
-                runAndSaveNtuple(n, sysA, sysB, signn, sigwidth, mind, fname);
+                sprintf(fname, "%s/%s_%s_sigwidth=%f_b=%f.root", dir, sysA, sysB, sigwidth, b);
+                runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname);
+                //runAndSaveNtuple(n, sysA, sysB, signn, sigwidth, mind, fname);
                 sigwidth += sigwidth_inc;
             } 
-        //    b += b_step;
-        //}
+            sigwidth = sigwidth_min;
+            b += b_step;
+        }
     }
 }
-/*
+
 void runAndSaveNtupleFixedbRange(const Int_t n,
         const char *sysA,
         const char *sysB,
@@ -59,6 +62,4 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
     if (nt) nt->Write();
     out.Close();
 }
-void makePlots(char* param, char* dir) {
-}
-*/
+
