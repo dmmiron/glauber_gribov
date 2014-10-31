@@ -1,3 +1,5 @@
 *.root
 *.dat
-
+*~
+read_ntuple.C
+runglauber*
