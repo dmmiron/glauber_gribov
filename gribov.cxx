@@ -26,9 +26,9 @@ void runSweep(Int_t n,
 
     char fname[1000];
     if (sigwidth_inc > 0 && b_step > 0) {
-        while (b < b_end) {
+        while (b <= b_end) {
             printf("%f, %f, %f, %f\n", b, b_start, b_end, b_step);
-            while (sigwidth < sigwidth_max)
+            while (sigwidth <= sigwidth_max)
             {
                 printf("hello\n");
                 sprintf(fname, "%s/%s_%s_sigwidth=%f_b=%f.root", dir, sysA, sysB, sigwidth, b);

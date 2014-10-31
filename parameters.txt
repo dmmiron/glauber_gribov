@@ -1,0 +1,4 @@
+Pb, Pb, signn=64, mind=.4, sig_width [0, .25, .5, .75, 1], b [0, 1, 2, 3, 4,
+5]
+
+p, Pb, signn=64, mind=.4, sig_width [0, .25, .5, .75, 1], b [0, 1, 2, 3, 4, 5]
