@@ -63,3 +63,32 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
     out.Close();
 }
 
+//read files in a directory and return a list of the trees in those files
+TList* loadTrees(const char* dirname, const char* treename)
+{
+    TList *trees = new TList();
+    TSystemDirectory dir(dirname, dirname);
+    TList *files = dir.GetListOfFiles();
+    TString path;
+    if (files) {
+        TSystemFile *sfile;
+        TFile *f;
+        TString fname;
+        TIter next(files);
+        while ((sfile=(TSystemFile*)next())) {
+            fname = sfile->GetName();
+            //printf("%s\n", fname.Data());
+            if (fname != "." && fname != "..") {
+                path = TString(dirname).Append(fname);
+                //printf("%s\n", path.Data());
+                f = TFile::Open(path);
+                cout << f->Get(treename)->GetName() << endl;
+                trees->Add(f->Get(treename));
+            }
+        }
+   }
+   return trees;
+}
+
+            
+
