@@ -90,5 +90,55 @@ TList* loadTrees(const char* dirname, const char* treename)
    return trees;
 }
 
-            
+THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start, Float_t end) {
+    THStack *hists = new THStack();
+    TH1F *hist;
+    TIter next(trees);
+    TTree *tree;
+    TTreeReader *reader;
+    TTreeReaderValue<Float_t> *values;
+    int i=0;
+    TString name;
+    while ((tree=(TTree*)next()))
+    {
+        reader = new TTreeReader(tree);
+        values = new TTreeReaderValue<Float_t>(*reader, var);
+        name = TString(tree->GetName()).Append(var).Append(to_string(i));
+        printf("name, %s\n", name.Data());
+        hist = new TH1F(name, name, nbins, start, end);
+        gStyle->SetHistFillColor(i+2);
+        gStyle->SetHistLineColor(i+2);
+        while (reader->Next()) {
+            hist->Fill(**values);
+        }
+        hists->Add(hist);
+        i++;
+    }
+    return hists;
+}
 
+void plotTHStack(THStack *hists) {
+
+    TList *hist_l = hists->GetHists();
+    TIter next(hist_l);
+    TH1F *hist;
+    TLegend *legend = new TLegend(.75, .80, .95, .95);
+    while ((hist=(TH1F*)next())) {
+        legend->AddEntry(hist, hist->GetName());
+    }
+    hists->Draw("nostack");
+    legend->Draw("");
+}
+
+void plotTrees(TList* trees, const char* var)
+{
+    TIter iter(trees); 
+    TTree *tree = (TTree*)iter();
+    //need to draw first one without passing same
+    //working with canvas elements is probably better fix and should be implemented at somepoint
+    tree->Draw(var);
+    while ((tree=(TTree*)iter())) {
+        tree->Draw(var, "", "SAME");
+        break;
+    }
+}
