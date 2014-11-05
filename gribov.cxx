@@ -31,7 +31,7 @@ void runSweep(Int_t n,
             while (sigwidth <= sigwidth_max)
             {
                 printf("hello\n");
-                sprintf(fname, "%s/%s_%s_sigwidth=%f_b=%f.root", dir, sysA, sysB, sigwidth, b);
+                sprintf(fname, "%s/%s_%s_sigwidth=%4.2f_b=%4.2f.root", dir, sysA, sysB, sigwidth, b);
                 runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname);
                 //runAndSaveNtuple(n, sysA, sysB, signn, sigwidth, mind, fname);
                 sigwidth += sigwidth_inc;
@@ -67,6 +67,7 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
 TList* loadTrees(const char* dirname, const char* treename)
 {
     TList *trees = new TList();
+    TTree *tree;
     TSystemDirectory dir(dirname, dirname);
     TList *files = dir.GetListOfFiles();
     TString path;
@@ -76,14 +77,22 @@ TList* loadTrees(const char* dirname, const char* treename)
         TString fname;
         TIter next(files);
         while ((sfile=(TSystemFile*)next())) {
-            fname = sfile->GetName();
-            //printf("%s\n", fname.Data());
+            fname = (TString)sfile->GetName();
             if (fname != "." && fname != "..") {
+                cout << fname << " fname" << endl;
+                TObjArray *subs = fname.Tokenize("_");
+                TObjString *sigwidth = (TObjString*)(*subs)[2];
+                TObjString *b = (TObjString*)(*subs)[3];
+                TString sigwidth_s = sigwidth->GetString();
+                TString b_s = b->GetString();
+
                 path = TString(dirname).Append(fname);
-                //printf("%s\n", path.Data());
                 f = TFile::Open(path);
+                tree = (TTree*)f->Get(treename);
                 cout << f->Get(treename)->GetName() << endl;
-                trees->Add(f->Get(treename));
+
+                tree->SetName(sigwidth_s.Append(b_s));
+                trees->Add(tree);
             }
         }
    }
@@ -91,21 +100,23 @@ TList* loadTrees(const char* dirname, const char* treename)
 }
 
 THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start, Float_t end) {
-    THStack *hists = new THStack();
+    TString title;
+    title = TString(var).Append(";").Append(var).Append(";Count");
+    THStack *hists = new THStack(var, title); //hstack title is of form tstring;xstring;ystring... and tstring becomes title, then [i]string becomes [i]axis title
     TH1F *hist;
     TIter next(trees);
     TTree *tree;
     TTreeReader *reader;
     TTreeReaderValue<Float_t> *values;
-    int i=0;
     TString name;
+    int i = 0;
     while ((tree=(TTree*)next()))
     {
         reader = new TTreeReader(tree);
         values = new TTreeReaderValue<Float_t>(*reader, var);
-        name = TString(tree->GetName()).Append(var).Append(to_string(i));
+        name = TString(tree->GetName());
         printf("name, %s\n", name.Data());
-        hist = new TH1F(name, name, nbins, start, end);
+        hist = new TH1F(name, title, nbins, start, end);
         gStyle->SetHistFillColor(i+2);
         gStyle->SetHistLineColor(i+2);
         while (reader->Next()) {
@@ -118,6 +129,7 @@ THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start,
 }
 
 void plotTHStack(THStack *hists) {
+    TCanvas *canvas = new TCanvas();
 
     TList *hist_l = hists->GetHists();
     TIter next(hist_l);
@@ -126,6 +138,8 @@ void plotTHStack(THStack *hists) {
     while ((hist=(TH1F*)next())) {
         legend->AddEntry(hist, hist->GetName());
     }
+    TAxis *Xaxis = hists->GetXaxis();
+    TAxis *Yaxis = hists->GetYaxis();
     hists->Draw("nostack");
     legend->Draw("");
 }
