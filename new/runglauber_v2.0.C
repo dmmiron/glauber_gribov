@@ -66,9 +66,10 @@ private:
   Int_t      fType;         //0 = neutron, 1 = proton
   Bool_t     fInNucleusA;   //=1 from nucleus A, =0 from nucleus B
   Int_t      fNColl;        //Number of binary collisions
+  Double_t   fR;            //Radius of nucleon 
 
 public:
-  TGlauNucleon() : fX(0), fY(0), fZ(0), fInNucleusA(0), fNColl(0) {}
+  TGlauNucleon() : fX(0), fY(0), fZ(0), fInNucleusA(0), fNColl(0), fR(0) {}
   virtual   ~TGlauNucleon() {}
   
   void       Collide()                                  {fNColl++;}
@@ -78,6 +79,7 @@ public:
   Double_t   GetX()                  const              {return fX;}
   Double_t   GetY()                  const              {return fY;}
   Double_t   GetZ()                  const              {return fZ;}
+  Double_t   GetR()                  const              {return fR;}
   Bool_t     IsInNucleusA()          const              {return fInNucleusA;}
   Bool_t     IsInNucleusB()          const              {return !fInNucleusA;}
   Bool_t     IsSpectator()           const              {return !fNColl;}
@@ -87,6 +89,7 @@ public:
   void       SetInNucleusA()                            {fInNucleusA=1;}
   void       SetInNucleusB()                            {fInNucleusA=0;}
   void       SetXYZ(Double_t x, Double_t y, Double_t z) {fX=x; fY=y; fZ=z;}
+  void       SetR(Double_t r)                           {fR=r;}
   void       RotateXYZ(Double_t phi, Double_t theta);
 
   ClassDef(TGlauNucleon,2) // TGlauNucleon class
@@ -124,11 +127,12 @@ private:
   Double_t   fThetaRot;            //Angle theta for nucleus
   Double_t   fHe3Arr[20000][3][3]; //Array of events, 3 nucleons, 3 coordinates
   Int_t      fHe3Counter;          //Event counter
+  TF1*       fFuncNuclRad;         //Probability density function for nucleon radius 
 
   void       Lookup(const char* name);
   
 public:
-  TGlauNucleus(const char* iname="Au", Int_t iN=0, Double_t iR=0, Double_t ia=0, Double_t iw=0, TF1* ifunc=0);
+  TGlauNucleus(const char* iname="Au", Int_t iN=0, Double_t iR=0, Double_t ia=0, Double_t iw=0, TF1* ifunc=0, rfunc=0);
   virtual ~TGlauNucleus();
   
   using      TObject::Draw;
@@ -148,7 +152,9 @@ public:
   void       SetA(Double_t ia);
   void       SetW(Double_t iw);
   void       SetMinDist(Double_t min) {fMinDist=min;}
+  void       SetRadFunc(TF1* func)    {fFuncNuclRad=func;}
   void       ThrowNucleons(Double_t xshift=0.);
+  
 
   ClassDef(TGlauNucleus,2) // TGlauNucleus class
 };
@@ -436,10 +442,10 @@ void runAndSmearNtuple(const Int_t n,
 //---------------------------------------------------------------------------------
 ClassImp(TGlauNucleus)
 //---------------------------------------------------------------------------------
-TGlauNucleus::TGlauNucleus(const char* iname, Int_t iN, Double_t iR, Double_t ia, Double_t iw, TF1* ifunc) : 
+TGlauNucleus::TGlauNucleus(const char* iname, Int_t iN, Double_t iR, Double_t ia, Double_t iw, TF1* ifunc, TF1* rfunc) : 
   fN(iN),fR(iR),fA(ia),fW(iw),fBeta2(0),fBeta4(0),fMinDist(0.4),
   fF(0),fTrials(0),fFunction(ifunc),fFunction2(0),
-  fNucleons(0), fPhiRot(0), fThetaRot(0), fHe3Counter(-1)
+  fNucleons(0), fPhiRot(0), fThetaRot(0), fHe3Counter(-1), fFuncNuclRad(rfunc)
 {
   if (fN==0) {
     cout << "Setting up nucleus " << iname << endl;
@@ -612,7 +618,9 @@ void TGlauNucleus::ThrowNucleons(Double_t xshift)
     fNucleons=new TObjArray(fN);
     fNucleons->SetOwner();
     for (Int_t i=0;i<fN;i++) {
+      //CHANGED LINES - use new extended nucleon class that has a radius
       TGlauNucleon *nucleon=new TGlauNucleon(); 
+      nucleon->SetR(fFuncNuclRad->GetRandom());
       nucleon->SetType(0);
       if (i<fZ) nucleon->SetType(1);
       fNucleons->Add(nucleon); 
@@ -809,6 +817,7 @@ TGlauberMC::TGlauberMC(const char* NA, const char* NB, Double_t xsect, Double_t 
   fBMin = 0;
   fBMax = 20;
   fXSect = xsect;
+  //if using gribov model also vary r
   if (xsectsigma>0) {
     fXSectOmega = xsectsigma;
     fXSectLambda = 1;
@@ -819,6 +828,12 @@ TGlauberMC::TGlauberMC(const char* NA, const char* NB, Double_t xsect, Double_t 
     cout << "final lambda=" << fXSectLambda << endl;
     fPTot->SetParameters(fXSect,fXSectOmega,fXSectLambda);
     cout << "final <sigma>=" << fPTot->GetHistogram()->GetMean() << endl;
+    //here we implement the nucleon radius probability distribution function"
+    //temporariliy uniform from 0 to 100
+    //fNucleonR = new TF1("fNucleonR", "1/100", 0, 100);
+    fANucleus->SetRadFunc(fNucleonR);
+    fBNucleus->SetRadFunc(fNucleonR);
+
   }
 
   TString name(Form("Glauber_%s_%s",fANucleus.GetName(),fBNucleus.GetName()));
@@ -862,6 +877,8 @@ Bool_t TGlauberMC::CalcEvent(Double_t bgen)
       Double_t dx = nucleonB->GetX()-nucleonA->GetX();
       Double_t dy = nucleonB->GetY()-nucleonA->GetY();
       Double_t dij = dx*dx+dy*dy;
+      //Use different diameter for each collision depending on nucleon radii
+      //d2 = nucleonB->GetR()+nucleonA->GetR();
       if (dij < d2) {
 	nucleonB->Collide();
 	nucleonA->Collide();
