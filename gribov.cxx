@@ -80,7 +80,11 @@ TList* loadTrees(const char* dirname, const char* treename)
             fname = (TString)sfile->GetName();
             if (fname != "." && fname != "..") {
                 cout << fname << " fname" << endl;
-                TObjArray *subs = fname.Tokenize("_");
+
+                //TString not immutable object  and Replace all modifies the string itself
+                TString temp = fname;
+                TObjArray *subs = temp.ReplaceAll(".root", "").Tokenize("_");
+
                 TObjString *sigwidth = (TObjString*)(*subs)[2];
                 TObjString *b = (TObjString*)(*subs)[3];
                 TString sigwidth_s = sigwidth->GetString();
@@ -91,7 +95,9 @@ TList* loadTrees(const char* dirname, const char* treename)
                 tree = (TTree*)f->Get(treename);
                 cout << f->Get(treename)->GetName() << endl;
 
-                tree->SetName(sigwidth_s.Append(b_s));
+                //use name to store sigwidth and title to store b
+                tree->SetName(sigwidth_s);
+                tree->SetTitle(b_s);
                 trees->Add(tree);
             }
         }
@@ -101,7 +107,7 @@ TList* loadTrees(const char* dirname, const char* treename)
 
 THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start, Float_t end) {
     TString title;
-    title = TString(var).Append(";").Append(var).Append(";Count");
+    title = TString(var).Append("_").Append(trees->First()->GetTitle()).Append(";").Append(var).Append(";Count");
     THStack *hists = new THStack(var, title); //hstack title is of form tstring;xstring;ystring... and tstring becomes title, then [i]string becomes [i]axis title
     TH1F *hist;
     TIter next(trees);
@@ -117,8 +123,8 @@ THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start,
         name = TString(tree->GetName());
         printf("name, %s\n", name.Data());
         hist = new TH1F(name, title, nbins, start, end);
-        gStyle->SetHistFillColor(i+2);
         gStyle->SetHistLineColor(i+2);
+        gStyle->SetHistFillColor(i+2);
         while (reader->Next()) {
             hist->Fill(**values);
         }
@@ -140,6 +146,7 @@ void plotTHStack(THStack *hists) {
     }
     TAxis *Xaxis = hists->GetXaxis();
     TAxis *Yaxis = hists->GetYaxis();
+    gStyle->SetPalette(51, 0, .5);
     hists->Draw("nostack");
     legend->Draw("");
 }
