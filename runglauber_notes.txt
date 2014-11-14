@@ -1,0 +1,18 @@
+fNt //ntuple with data
+while loop for NextEvent just used to make sure there is SOME interaciton in
+collision
+NextEvent //updates random seed and runs CalcEvent //returns same Bool as
+CalcEvent //prepares nuclei for collision and collides them, then calls
+CalcReulsts to get data from collision //returns same Bool as Calc Even
+
+CalcResults  //only returns False if Npart == 0 (no particles interacted)
+
+line 811 //TGlauberMC handling if xsectsigma (sigwidth) > 0 (glauber-gribov)
+
+fxSect = sigma_0
+fXSectOmega = Omega
+fXSectLambda = scale facotr with sigma_nn
+
+line 849 if (fPTot) call GetRandom and use as "ball" diameter-should work for
+nucleus nucleus collisions
+
