@@ -132,7 +132,7 @@ private:
   void       Lookup(const char* name);
   
 public:
-  TGlauNucleus(const char* iname="Au", Int_t iN=0, Double_t iR=0, Double_t ia=0, Double_t iw=0, TF1* ifunc=0, rfunc=0);
+  TGlauNucleus(const char* iname="Au", Int_t iN=0, Double_t iR=0, Double_t ia=0, Double_t iw=0, TF1* ifunc=0, TF1* rfunc=0);
   virtual ~TGlauNucleus();
   
   using      TObject::Draw;
@@ -153,6 +153,7 @@ public:
   void       SetW(Double_t iw);
   void       SetMinDist(Double_t min) {fMinDist=min;}
   void       SetRadFunc(TF1* func)    {fFuncNuclRad=func;}
+  TF1*       GetRadFunc()       const {return fFuncNuclRad;}
   void       ThrowNucleons(Double_t xshift=0.);
   
 
@@ -620,7 +621,10 @@ void TGlauNucleus::ThrowNucleons(Double_t xshift)
     for (Int_t i=0;i<fN;i++) {
       //CHANGED LINES - use new extended nucleon class that has a radius
       TGlauNucleon *nucleon=new TGlauNucleon(); 
-      nucleon->SetR(fFuncNuclRad->GetRandom());
+      if (fFuncNuclRad) {
+        nucleon->SetR(fFuncNuclRad->GetRandom());
+        //cout << nucleon->GetR() << endl;
+      }
       nucleon->SetType(0);
       if (i<fZ) nucleon->SetType(1);
       fNucleons->Add(nucleon); 
@@ -818,6 +822,7 @@ TGlauberMC::TGlauberMC(const char* NA, const char* NB, Double_t xsect, Double_t 
   fBMax = 20;
   fXSect = xsect;
   //if using gribov model also vary r
+  //CHANGED LINES
   if (xsectsigma>0) {
     fXSectOmega = xsectsigma;
     fXSectLambda = 1;
@@ -830,10 +835,19 @@ TGlauberMC::TGlauberMC(const char* NA, const char* NB, Double_t xsect, Double_t 
     cout << "final <sigma>=" << fPTot->GetHistogram()->GetMean() << endl;
     //here we implement the nucleon radius probability distribution function"
     //temporariliy uniform from 0 to 100
-    //fNucleonR = new TF1("fNucleonR", "1/100", 0, 100);
-    fANucleus->SetRadFunc(fNucleonR);
-    fBNucleus->SetRadFunc(fNucleonR);
-
+    Double_t maxr = TMath::Sqrt(fXSect/TMath::Pi());
+    Double_t mu_r = (1.0/2.0)*TMath::Sqrt(fXSect/TMath::Pi()); //average value for r
+    Double_t sigmar = fXSectOmega/TMath::Sqrt(2);
+    //TF1* fNucleonR = new TF1("fNucleonR", "(1/(sqrt(2*pi*[0])))*exp(-((x-([1]/2))/[2])**2)", 0, maxr);
+    //fNucleonR->SetParameters(sigmar, maxr, fXSectOmega); 
+    TF1* fNucleonR = new TF1("fNucleonR", "(1/(sqrt(2*pi*[1])))*exp(-((x-[0])/[2])**2)", 0, maxr);
+    fNucleonR->SetParameters(mu_r, sigmar, fXSectOmega); 
+    cout << "mu_r" << mu_r << "sigmar" << sigmar << "fXSectOmega" << fXSectOmega << endl;
+    cout << "fxsect" << fXSect << "xsectsigma" << xsectsigma << endl;
+    //TF1* fNucleonR = new TF1("fNucleonR", "x", 40.255, 40.256);
+    fNucleonR->SetNpx(1000); //get better results for GetRandom
+    fANucleus.SetRadFunc(fNucleonR);
+    fBNucleus.SetRadFunc(fNucleonR);
   }
 
   TString name(Form("Glauber_%s_%s",fANucleus.GetName(),fBNucleus.GetName()));
@@ -868,7 +882,8 @@ Bool_t TGlauberMC::CalcEvent(Double_t bgen)
 
   // "ball" diameter = distance at which two balls interact
   Double_t d2 = (Double_t)fXSectEvent/(TMath::Pi()*10); // in fm^2
-
+  //cout << d2 << "without glabuer gribov" << endl;
+  //CHANGED LINES
   // for each of the A nucleons in nucleus B
   for (Int_t i = 0; i<fBN; i++) {
     TGlauNucleon *nucleonB=(TGlauNucleon*)(fNucleonsB->At(i));
@@ -878,7 +893,12 @@ Bool_t TGlauberMC::CalcEvent(Double_t bgen)
       Double_t dy = nucleonB->GetY()-nucleonA->GetY();
       Double_t dij = dx*dx+dy*dy;
       //Use different diameter for each collision depending on nucleon radii
-      //d2 = nucleonB->GetR()+nucleonA->GetR();
+      if (fPTot) //if using glauber gribov
+      {
+        d2 = nucleonB->GetR()+nucleonA->GetR();
+        //if (j == 0) 
+        //  cout << d2 << "with r sampled" << endl;
+      }
       if (dij < d2) {
 	nucleonB->Collide();
 	nucleonA->Collide();

@@ -12,6 +12,7 @@ private:
   Int_t      fType;         //0 = neutron, 1 = proton
   Bool_t     fInNucleusA;   //=1 from nucleus A, =0 from nucleus B
   Int_t      fNColl;        //Number of binary collisions
+  Double_t   fR;            //Radius of nucleon
 
 public:
   TGlauNucleon() : fX(0), fY(0), fZ(0), fInNucleusA(0), fNColl(0) {}
@@ -24,6 +25,7 @@ public:
   Double_t   GetX()                  const              {return fX;}
   Double_t   GetY()                  const              {return fY;}
   Double_t   GetZ()                  const              {return fZ;}
+  Double_t   GetR()                  const              {return fR;}
   Bool_t     IsInNucleusA()          const              {return fInNucleusA;}
   Bool_t     IsInNucleusB()          const              {return !fInNucleusA;}
   Bool_t     IsSpectator()           const              {return !fNColl;}
@@ -33,6 +35,7 @@ public:
   void       SetInNucleusA()                            {fInNucleusA=1;}
   void       SetInNucleusB()                            {fInNucleusA=0;}
   void       SetXYZ(Double_t x, Double_t y, Double_t z) {fX=x; fY=y; fZ=z;}
+  void       SetR(Double_t r)                           {fR=r;}
   void       RotateXYZ(Double_t phi, Double_t theta);
 
   ClassDef(TGlauNucleon,2) // TGlauNucleon class
@@ -59,6 +62,7 @@ private:
   Double_t   fThetaRot;            //Angle theta for nucleus
   Double_t   fHe3Arr[20000][3][3]; //Array of events, 3 nucleons, 3 coordinates
   Int_t      fHe3Counter;          //Event counter
+  TF1*       fFuncNuclRad;         //Probability density function for nucleon radius
 
   void       Lookup(const char* name);
   
@@ -83,6 +87,8 @@ public:
   void       SetA(Double_t ia);
   void       SetW(Double_t iw);
   void       SetMinDist(Double_t min) {fMinDist=min;}
+  void       SetRadFunc(TF1* func)    {fFuncNuclRad=func;}
+  TF1*       GetRadFunc()       const {return fFuncNuclRad;}
   void       ThrowNucleons(Double_t xshift=0.);
 
   ClassDef(TGlauNucleus,2) // TGlauNucleus class
