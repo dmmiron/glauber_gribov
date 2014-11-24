@@ -172,3 +172,27 @@ void plotTrees(TList* trees, const char* var)
         break;
     }
 }
+
+void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
+    TH1F *sigma = sampled_sigma(rdist, nobs, max_r, min_r);
+    sigma->Draw();
+}
+
+//recommend > 10**5, 10**6 seems generally sufficient, but can easily handle more entries efficiently
+TH1F *sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
+    Double_t r1;
+    Double_t r2;
+    Double_t max_sigma = TMath::Pi()*4*max_r*max_r;
+    //create an empty sigma histogram from 0 to pi*(r+r)^2. bin resolution = 1
+    TH1F *sigma = new TH1F("sampled_sigma", "sigma distribution", max_sigma, 0, max_sigma);
+    
+    for (int i = 0; i < nobs; i++) {
+        Double_t r1 = r_dist->GetRandom();
+        Double_t r2 = r_dist->GetRandom();
+        Double_t R = r1+r2;
+        sigma->Fill(TMath::Pi()*R*R);
+    }
+    return sigma;
+}
+
+
