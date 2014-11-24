@@ -173,13 +173,41 @@ void plotTrees(TList* trees, const char* var)
     }
 }
 
-void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
+TF1* get_target(){
+     TGlauberMC* mcg = new TGlauberMC("Pb", "Pb", 64, .5);
+     return mcg->GetXSectDist();
+        
+}
+
+void normalize(TH1 *dist) {
+    Double_t area;
+    if (dist->GetXaxis()->IsVariableBinSize())
+        area = calc_area(dist);
+    else
+        area = dist->GetEntries()*dist->GetBinWidth(1);
+    dist->Scale(1.0/area);
+}
+
+Double_t calc_area(TH1 *dist) {
+    Int_t nbins = dist->GetNbinsX();
+    Double_t sum = 0;
+    TAxis *xaxis = dist->GetXaxis();
+    for (int bin = 0; bin <= nbins; bin++) {
+        sum += dist->GetBinContent(bin)/xaxis->GetBinWidth(bin);
+    }
+    return sum;
+}
+
+void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0, Bool_t same=true) {
     TH1F *sigma = sampled_sigma(rdist, nobs, max_r, min_r);
-    sigma->Draw();
+    if (same)
+        sigma->Draw("SAME");
+    else
+        sigma->Draw();
 }
 
 //recommend > 10**5, 10**6 seems generally sufficient, but can easily handle more entries efficiently
-TH1F *sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
+TH1F* sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
     Double_t r1;
     Double_t r2;
     Double_t max_sigma = TMath::Pi()*4*max_r*max_r;
@@ -192,6 +220,7 @@ TH1F *sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
         Double_t R = r1+r2;
         sigma->Fill(TMath::Pi()*R*R);
     }
+    normalize(sigma);
     return sigma;
 }
 
