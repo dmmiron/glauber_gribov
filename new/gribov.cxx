@@ -180,14 +180,11 @@ TF1* get_target(){
 }
 
 void normalize(TH1 *dist) {
-    Double_t area;
-    if (dist->GetXaxis()->IsVariableBinSize())
-        area = calc_area(dist);
-    else
-        area = dist->GetEntries()*dist->GetBinWidth(1);
+    Int_t nbins = dist->GetNbinsX();
+    Double_t area = dist->Integral(0, nbins+1, "width");
     dist->Scale(1.0/area);
 }
-
+/*
 Double_t calc_area(TH1 *dist) {
     Int_t nbins = dist->GetNbinsX();
     Double_t sum = 0;
@@ -195,8 +192,10 @@ Double_t calc_area(TH1 *dist) {
     for (int bin = 0; bin <= nbins; bin++) {
         sum += dist->GetBinContent(bin)/xaxis->GetBinWidth(bin);
     }
+    cout << "sum" << sum << "nbins" << nbins << endl;
     return sum;
 }
+*/
 
 void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0, Bool_t same=true) {
     TH1F *sigma = sampled_sigma(rdist, nobs, max_r, min_r);
