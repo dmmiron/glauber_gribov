@@ -836,12 +836,16 @@ TGlauberMC::TGlauberMC(const char* NA, const char* NB, Double_t xsect, Double_t 
     //here we implement the nucleon radius probability distribution function"
     //temporariliy uniform from 0 to 100
     Double_t maxr = TMath::Sqrt(fXSect/TMath::Pi());
-    Double_t mu_r = (1.0/2.0)*TMath::Sqrt(fXSect/TMath::Pi()); //average value for r
-    Double_t sigmar = fXSectOmega/TMath::Sqrt(2);
+    //Double_t mu_r = TMath::Sqrt(fXSect/TMath::Pi())/2.0; //average value for r
+    Double_t mu_r = TMath::Sqrt(fPTot->GetHistogram()->GetMean()/(10*TMath::Pi()))/2.0;
+    cout << mu_r << "MU_R" << TMath::Sqrt(fXSect/(10*TMath::Pi()))/2.0 << endl;
+    //10 to match /10 used when calculating fXsect event  
+    //Double_t sigmar = (fXSect*fXSectOmega/2.0)*(fXSect*fXSectOmega/2.0)/2.0; //sigma_0*omega/2 since SD_r = SD_sig/2
+    Double_t sigmar = fXSectOmega/2; //experimentally determined
     //TF1* fNucleonR = new TF1("fNucleonR", "(1/(sqrt(2*pi*[0])))*exp(-((x-([1]/2))/[2])**2)", 0, maxr);
     //fNucleonR->SetParameters(sigmar, maxr, fXSectOmega); 
-    TF1* fNucleonR = new TF1("fNucleonR", "(1/(sqrt(2*pi*[1])))*exp(-((x-[0])/[2])**2)", 0, maxr);
-    fNucleonR->SetParameters(mu_r, sigmar, fXSectOmega); 
+    TF1* fNucleonR = new TF1("fNucleonR", "(1/(sqrt(2*pi*[1])))*exp(-((x-[0])**2)/(2*[1]))", 0, maxr);
+    fNucleonR->SetParameters(mu_r, sigmar); 
     cout << "mu_r" << mu_r << "sigmar" << sigmar << "fXSectOmega" << fXSectOmega << endl;
     cout << "fxsect" << fXSect << "xsectsigma" << xsectsigma << endl;
     //TF1* fNucleonR = new TF1("fNucleonR", "x", 40.255, 40.256);
