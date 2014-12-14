@@ -173,10 +173,17 @@ void plotTrees(TList* trees, const char* var)
     }
 }
 
-TF1* get_target(){
-     TGlauberMC* mcg = new TGlauberMC("Pb", "Pb", 64, .5);
+TF1* get_target(Double_t xsectsigma=.5){
+     TGlauberMC* mcg = new TGlauberMC("Pb", "Pb", 64, xsectsigma);
      return mcg->GetXSectDist();
         
+}
+
+TH1* get_normalized_target(Double_t xsectsigma=.5){
+    TF1 *target_func = get_target(xsectsigma);
+    TH1 *target_hist = target_func->GetHistogram();
+    normalize(target_hist);
+    return target_hist;
 }
 
 void normalize(TH1 *dist) {
@@ -223,4 +230,54 @@ TH1F* sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
     return sigma;
 }
 
+TF1 *make_r_dist(Double_t sigma=1) {
+    TF1 *target_func = get_target(sigma);
+    //Double_t mu = TMath::Sqrt(target_func->Moment(1, 0, 10000)/TMath::Pi())/2;
+    Double_t mu_sigma = (fPTot->GetHistogram()->GetMean());
+    cout << mu_sigma << "mu_sigma" << endl;
+    Double_t sd_sigma = sigma; 
+
+    
+    //calculate diameter mean and sd as intermediates
+    Double_t sd_d = TMath::Power(((sd_sigma*sd_sigma)+(mu_sigma*mu_sigma))/(TMath::Pi()*TMath::Pi()*3.0), .25);
+    Double_t mu_d = TMath::Sqrt((mu_sigma/TMath::Pi())-sd_d*sd_d);
+
+    Double_t mu = mu_d/2.0;
+    Double_t sd = sd_d/TMath::Sqrt(2.0);
+     
+    //Double_t sd = sigma;
+    cout << mu << " mu, " << sd << " sd" << endl;
+    TF1 *r_dist = new TF1("r_dist", "(1/(sqrt(2*pi*[1])))*exp(-((x-[0])**2)/(2*[1]))", 0, 10);
+    r_dist->SetParameters(mu, sd); //sigma defaults to 1
+    return r_dist;
+}
+
+TF1 *make_r_dist(Double_t mu, Double_t sigma) {
+    TF1 *r_dist = new TF1("r_dist", "(1/(sqrt(2*pi*[1])))*exp(-((x-[0])**2)/(2*[1]))", 0, 10);
+    r_dist->SetParameters(mu, sigma);
+    return r_dist;
+}
+TF1 *make_r_dist_gamma(Double_t mu_sigma, Double_t sd_sigma) {
+    Double_t beta = 1 + (sd_sigma/mu_sigma)*(sd_sigma/mu_sigma);
+    Double_t k_d = ((beta-5)-TMath::Sqrt((5-beta)*(5-beta)-24*(1-beta)))/(2*(1-beta));
+    Double_t theta_d = TMath::Sqrt(mu_sigma/(TMath::Pi()*(k_d*k_d+k_d)));
+
+    Double_t k_r = k_d/2.0;
+    Double_t theta_r = theta_d;
+
+    TF1 *fNucleonR = new TF1("fNucleonR", "TMath::GammaDist(x, [0], 0, [1])", 0, 10);
+    fNucleonR->SetParameters(k_r, theta_r);
+    cout << k_r << " k_r, " << theta_r << " theta_r" << endl;
+    return fNucleonR;
+}
+
+void sweep_sigma() {
+    Double_t sigma = .5;
+    while (sigma<10) {
+        r_dist = make_r_dist(sigma);
+        plot_sigma(r_dist, 10000, 5);
+        sigma +=.5;
+    }
+}
+        
 
