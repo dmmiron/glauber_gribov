@@ -123,14 +123,16 @@ THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start,
     TTreeReader *reader;
     TTreeReaderValue<Float_t> *values;
     TString name;
+    TString h_title;
     int i = 0;
     while ((tree=(TTree*)next()))
     {
         reader = new TTreeReader(tree);
         values = new TTreeReaderValue<Float_t>(*reader, var);
         name = TString(tree->GetName());
+        h_title = TString(tree->GetTitle());
         printf("name, %s\n", name.Data());
-        hist = new TH1F(name, title, nbins, start, end);
+        hist = new TH1F(name, h_title, nbins, start, end);
         gStyle->SetHistLineColor(i+2);
         gStyle->SetHistLineWidth(4);
         //gStyle->SetHistFillColor(i+2);
@@ -141,6 +143,34 @@ THStack* extractHists(TList *trees, const char* var, Int_t nbins, Float_t start,
         i++;
     }
     return hists;
+}
+
+void ncoll_vs_npart(TList *trees) {
+    TList *npart_l = extractHists(trees, "Npart", 100, 0, 500)->GetHists();
+    TList *ncoll_l = extractHists(trees, "Ncoll", 1000, 0, 5000)->GetHists();
+    TIter npart_i(npart_l);
+    TIter ncoll_i(ncoll_l);
+
+    TH1F* npart;
+    TH1F* ncoll;
+    TH1F* hist = new TH1F("ncoll_vs_npart", "ncoll_vs_npart", 100, 0, 500);
+
+    Int_t n_entries = trees->GetEntries();
+
+    Double_t npart_values[n_entries];
+    Double_t ncoll_values[n_entries];
+     
+    Int_t i = 0;
+    while ((npart=(TH1F*)npart_i()) && (ncoll=(TH1F*)ncoll_i())) {
+        npart_values[i] = npart->GetMean();
+        ncoll_values[i] = ncoll->GetMean();
+        i++;
+    } 
+    
+    TGraph *g = new TGraph(n_entries, npart_values, ncoll_values); 
+    g->Draw("ap");
+    
+
 }
 
 void plotTHStack(THStack *hists) {
