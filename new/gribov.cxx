@@ -19,7 +19,8 @@ void runSweep(Int_t n,
         const Double_t b_start,
         const Double_t b_end,
         const Double_t b_step,
-        const char* dir)
+        const char* dir,
+        Bool_t nucleons)
 {
     Double_t sigwidth = sigwidth_min;
     Double_t b = b_start;
@@ -32,7 +33,8 @@ void runSweep(Int_t n,
             {
                 printf("hello\n");
                 sprintf(fname, "%s/%s_%s_sigwidth=%4.2f_b=%4.2f.root", dir, sysA, sysB, sigwidth, b);
-                runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname);
+                cout << nucleons << "nucleons" << endl;
+                runAndSaveNtupleFixedbRange(n, sysA, sysB, signn, sigwidth, mind, b, b, fname, nucleons);
                 //runAndSaveNtuple(n, sysA, sysB, signn, sigwidth, mind, fname);
                 sigwidth += sigwidth_inc;
             } 
@@ -50,7 +52,8 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
         const Double_t mind,
         const Double_t bmin,
         const Double_t bmax, 
-        const char *fname)
+        const char *fname,
+        Bool_t saveNucleons)
 {
     TGlauberMC *mcg=new TGlauberMC(sysA,sysB,signn,sigwidth);
     mcg->SetMinDistance(mind);
@@ -58,8 +61,16 @@ void runAndSaveNtupleFixedbRange(const Int_t n,
     mcg->SetBmax(bmax);
     mcg->Run(n);
     TNtuple *nt=mcg->GetNtuple();
-    cout << nt << endl;
     TFile out(fname,"recreate",fname,9);
+    if (saveNucleons) {
+        for (Int_t ievent=0; ievent<n; ievent++) {
+            while (!mcg->NextEvent()) {}
+
+            TObjArray* nucleons=mcg->GetNucleons();
+            nucleons->Write(Form("nucleonarray%d", ievent), TObject::kSingleKey);
+        }
+    }
+    cout << nt << endl;
     if (nt) {
         cout << "writing" << endl;
         nt->Write();
@@ -74,6 +85,7 @@ TList* loadTrees(const char* dirname, const char* treename)
     TTree *tree;
     TSystemDirectory dir(dirname, dirname);
     TList *files = dir.GetListOfFiles();
+    files->Sort();
     TString path;
     if (files) {
         TSystemFile *sfile;
@@ -168,6 +180,7 @@ void ncoll_vs_npart(TList *trees) {
     } 
     
     TGraph *g = new TGraph(n_entries, npart_values, ncoll_values); 
+    g->SetTitle("Ncoll vs Npart");
     g->Draw("ap");
     
 
@@ -178,7 +191,7 @@ void plotTHStack(THStack *hists) {
 
     TList *hist_l = hists->GetHists();
     TIter next(hist_l);
-    TH1F *hist;
+    TH1F *hist; 
     TLegend *legend = new TLegend(.75, .80, .95, .95);
     while ((hist=(TH1F*)next())) {
         legend->AddEntry(hist, hist->GetName());
@@ -234,8 +247,8 @@ Double_t calc_area(TH1 *dist) {
 }
 */
 
-void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0, Bool_t same=true) {
-    TH1F *sigma = sampled_sigma(rdist, nobs, max_r, min_r);
+void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0, Bool_t same=true, Double_t scale=1.0) {
+    TH1F *sigma = sampled_sigma(rdist, nobs, max_r, min_r, scale);
     if (same)
         sigma->Draw("SAME");
     else
@@ -243,7 +256,7 @@ void plot_sigma(TF1 *rdist, Int_t nobs, Double_t max_r, Double_t min_r=0, Bool_t
 }
 
 //recommend > 10**5, 10**6 seems generally sufficient, but can easily handle more entries efficiently
-TH1F* sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
+TH1F* sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0, Double_t scale=1.0) {
     Double_t r1;
     Double_t r2;
     Double_t max_sigma = TMath::Pi()*4*max_r*max_r;
@@ -253,7 +266,7 @@ TH1F* sampled_sigma(TF1 *r_dist, Int_t nobs, Double_t max_r, Double_t min_r=0) {
     for (int i = 0; i < nobs; i++) {
         Double_t r1 = r_dist->GetRandom();
         Double_t r2 = r_dist->GetRandom();
-        Double_t R = r1+r2;
+        Double_t R = scale*(r1+r2);
         sigma->Fill(TMath::Pi()*R*R);
     }
     normalize(sigma);
@@ -310,4 +323,22 @@ void sweep_sigma() {
     }
 }
         
+TH1F* makeNucleonHist(const char* fname) {
+
+    TFile *f = TFile::Open(fname);
+    TIter next(f->GetListOfKeys());
+    TKey *key;
+    TObjArray *nuclArray;
+    TGlauNucleon *nucleon;
+    TH1F* hist = new TH1F("nucleon_r_dist", "nucleon_r_dist", 1000, 0, 10);
+    while ((key=(TKey*)next())) {
+        nuclArray = (TObjArray*)f->Get(key->GetName());
+        cout << key->GetName() << endl;
+        for (int i=0; i<nuclArray->GetEntries(); i++) {
+            nucleon = (TGlauNucleon*)nuclArray->At(i);
+            hist->Fill(nucleon->GetR());
+        }
+    }
+    return hist;
+}
 
