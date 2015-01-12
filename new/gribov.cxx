@@ -330,7 +330,7 @@ TH1F* makeNucleonHist(const char* fname) {
     TKey *key;
     TObjArray *nuclArray;
     TGlauNucleon *nucleon;
-    TH1F* hist = new TH1F("nucleon_r_dist", "nucleon_r_dist", 1000, 0, 10);
+    TH1F* hist = new TH1F("nucleon_r_dist", "nucleon_r_dist", 100, 0, 10);
     while ((key=(TKey*)next())) {
         nuclArray = (TObjArray*)f->Get(key->GetName());
         cout << key->GetName() << endl;
