@@ -34,7 +34,8 @@ class Nucleus
        //friend Double_t    EvalIntegrand(Double_t *b, Double_t *par); //evaluate the thickness integral at a given impact paramter
        Double_t     EvalIntegrand(Double_t *r, Double_t *par);
        Double_t     EvalIntegral(Double_t b);
-       Double_t     Thickness(Double_t b);
+       Double_t     Thickness(Double_t *b, Double_t *);
+       TF1*         ThicknessTF1();
 };
 
 Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
@@ -97,19 +98,27 @@ struct MyIntegFunc {
     TF1 *fFunc;
 };
 
-struct ThicknessIntegrandFunc {
-    ThicknessIntegrandFunc(TF1 *f): fFunc(f) {}
+struct ThicknessFunc {
+    ThicknessFunc(TF1 *f): fFunc(f) {}
     double operator() (double *x, double *par) const{
-        double b = *par;
-        double r = *x;
-        return fFunc->Eval(r)*r/(r*r-b*b);
+        double b = *x;
+        fFunc->SetParameter(0, b);
+        return fFunc->Integral(b, 10);
     }
     TF1 *fFunc;
 };
 
-Double_t Nucleus::Thickness(Double_t b) {
-    fThickIntegrand->SetParameter(0, b);
-    return fThickIntegrand->Integral(b, fMaxR);
+Double_t Nucleus::Thickness(Double_t *b, Double_t *) {
+    Double_t bb = *b;
+    fThickIntegrand->SetParameter(0, bb);
+    return fThickIntegrand->Integral(bb, fMaxR);
+}
+
+TF1* Nucleus::ThicknessTF1(){
+    ThicknessFunc *thickfunc = new ThicknessFunc(fThickIntegrand);
+    TF1 *thickness = new TF1("thickness", thickfunc, 0, 10, 0, "ThickFunc");
+    //TF1 *thickness = new TF1("thickness", "x", 0, 10);
+    return thickness;
 }
     
 
