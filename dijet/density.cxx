@@ -18,6 +18,7 @@ class Nucleus
         TF1*        fThickIntegrand; //Integrand used for thickness funciton
         Double_t    fMaxR;      //maximum r used for calculating integrals
         void        Update();  // sets fDensity and fThickness
+        Double_t    EvalDensity(Double_t r);
     public:
        Nucleus(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1);
        
@@ -29,8 +30,11 @@ class Nucleus
        void         SetRho0(Double_t iRho0);
        void         SetR0(Double_t iR0);
        void         SetMu(Double_t iMu);
-       TF1*         MakeThicknessFunc();
-       friend Double_t    EvalIntegrand(Double_t *b, Double_t *par); //evaluate the thickness integral at a given impact paramter
+       TF1*         MakeThicknessIntegrand();
+       //friend Double_t    EvalIntegrand(Double_t *b, Double_t *par); //evaluate the thickness integral at a given impact paramter
+       Double_t     EvalIntegrand(Double_t *r, Double_t *par);
+       Double_t     EvalIntegral(Double_t b);
+       Double_t     Thickness(Double_t b);
 };
 
 Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
@@ -46,28 +50,79 @@ void Nucleus::Update() {
     else
         fMaxR = 10*fMu;
     //ask about typical values for mu and r0 to determine limiting case
-    fDensity = new TF1("Density Function", "[0]/(exp((x-[1])/[2])+1)", 0, fMaxR);
+    fDensity = new TF1("fDensity", "[0]/(exp((x-[1])/[2])+1)", 0, fMaxR);
     fDensity->SetParameters(fRho0, fR0, fMu);
 
-    fThickness = MakeThicknessFunc();
+    fThickIntegrand = MakeThicknessIntegrand();
 }
 
-Double_t evalDensity(Double_t r) {
+Double_t Nucleus::EvalDensity(Double_t r) {
     return fDensity->Eval(r);
 }
+/*
+Double_t Nucleus::EvalIntegrand(Double_t r, Double_t b) {
+    return fDensity->Eval(r)*r/TMath::Sqrt(r*r-b*b);
+}
+*/
+/*
+Double_t Nucleus::EvalIntegral(Double_t b) {
+    TF1 *integrand = new TF1("integrand", EvalIntegrand, 0, fMaxR, 1);
+    integrand->SetParameter(0, b);
+    return integrand->Integral(b, DBL_MAX);
+}
+*/
+Double_t Nucleus::EvalIntegrand(Double_t *r, Double_t *par) { 
+    Double_t rr = r[0];
+    Double_t b = par[0];
 
-Double_t EvalIntegrand(Double_t *b, Double_t *par) { 
-    Double_t bb = b[0];
-    fThickIntegrand->SetParameter(0, bb);
-    //return fThickIntegrand->Integral(bb, DBL_MAX);
-    return bb;
+    return fDensity->Eval(rr)*rr/TMath::Sqrt(rr*rr-b*b);
+    //fThickIntegrand->SetParameter(0, bb);
 }
 
-TF1* Nucleus::MakeThicknessFunc() {
-    //we have T(b) = integral(pho(r) dz) and r = sqrt(b^2+z^2) so we convert dz in terms of r and b and then can integrate with respect to r
-    fThickIntegrand = new TF1("integrand", "fDensity*x/(sqrt(x*x-[0]*[0]))", 0, fMaxR); 
-    TF1 *thickness = new TF1("thickness", EvalIntegrand, 0, fMaxR, 0); //evalIntegrand is a C function that returns the thickness at a given impact paramter (the 0 in the fifth spot here specifies that evalIntegrand takes no paramters other than b)
-    return thickness;
+//function object (functor) 
+struct MyDerivFunc { 
+    MyDerivFunc(TF1 *f): fFunc(f) {}
+    double operator() (double *x, double * )  const { 
+        return fFunc->Derivative(*x);
+    }
+    TF1 * fFunc; 
+};
+
+struct MyIntegFunc {
+    MyIntegFunc(TF1 *f): fFunc(f) {}
+    double operator() (double *x, double *par) const {
+        double a = fFunc->GetXmin();
+        return fFunc->Integral(a, *x);
+    }
+    TF1 *fFunc;
+};
+
+struct ThicknessIntegrandFunc {
+    ThicknessIntegrandFunc(TF1 *f): fFunc(f) {}
+    double operator() (double *x, double *par) const{
+        double b = *par;
+        double r = *x;
+        return fFunc->Eval(r)*r/(r*r-b*b);
+    }
+    TF1 *fFunc;
+};
+
+Double_t Nucleus::Thickness(Double_t b) {
+    fThickIntegrand->SetParameter(0, b);
+    return fThickIntegrand->Integral(b, fMaxR);
+}
+    
+
+TF1* Nucleus::MakeThicknessIntegrand() {
+    //we have T(b) = integral(rho(r) dz) and r = sqrt(b^2+z^2) so we convert dz in terms of r and b and then can integrate with respect to r
+    //fThickIntegrand = new TF1("integrand", "fDensity*x/(sqrt(x*x-[0]*[0]))", 0, fMaxR); 
+    //ThicknessIntegrandFunc *integrand = new ThicknessIntegrandFunc("fDensity")
+    TF1 *fThickIntegrand = new TF1("fThickIntegrand", "fDensity*x/TMath::Sqrt(x*x-[0]*[0])", 0, fMaxR); 
+    MyIntegFunc *intg = new MyIntegFunc(fThickIntegrand);
+    TF1 *fThickness = new TF1("fThickness", intg, 0, fMaxR, 1, "MyIntegFunc");
+    //TF1 *thickness = new TF1("thickness", EvalIntegrand, 0, fMaxR, 0); //evalIntegrand is a C function that returns the thickness at a given impact paramter (the 0 in the fifth spot here specifies that evalIntegrand takes no paramters other than b)
+    return fThickIntegrand;
+    //return fThickness;
 }
         
 //Collision Class-contains two nucleus objects (possibly identical?) and then also has 2-d particle density funciton and method to get values given input locations
