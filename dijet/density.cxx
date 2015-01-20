@@ -18,24 +18,22 @@ class Nucleus
         TF1*        fThickIntegrand; //Integrand used for thickness funciton
         Double_t    fMaxR;      //maximum r used for calculating integrals
         void        Update();  // sets fDensity and fThickness
-        Double_t    EvalDensity(Double_t r);
+        TF1*        MakeThicknessIntegrand();
+        TF1*        MakeThicknessFunc();
     public:
        Nucleus(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1);
        
-       Double_t     GetRho0()       const {return fRho0;}
-       Double_t     GetR0()         const {return fR0;}
-       Double_t     GetMu()         const {return fMu;}
-       TF1*         GetDensity()    const {return fDensity;}
-       TF1*         GetThickness()  const {return fThickness;} 
+       Double_t     GetRho0()                 const {return fRho0;}
+       Double_t     GetR0()                   const {return fR0;}
+       Double_t     GetMu()                   const {return fMu;}
+       Double_t     GetDensity(Double_t r)    const {return fDensity->Eval(r);}
+       Double_t     GetThickness(Double_t b)  const {return fThickness->Eval(b);}
+       TF1*         GetDensityFunc()          const {return fDensity;}
+       TF1*         GetThicknessFunc()        const {return fThickness;}
        void         SetRho0(Double_t iRho0);
        void         SetR0(Double_t iR0);
        void         SetMu(Double_t iMu);
-       TF1*         MakeThicknessIntegrand();
-       //friend Double_t    EvalIntegrand(Double_t *b, Double_t *par); //evaluate the thickness integral at a given impact paramter
-       Double_t     EvalIntegrand(Double_t *r, Double_t *par);
-       Double_t     EvalIntegral(Double_t b);
        Double_t     Thickness(Double_t *b, Double_t *);
-       TF1*         ThicknessTF1();
 };
 
 Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
@@ -55,29 +53,7 @@ void Nucleus::Update() {
     fDensity->SetParameters(fRho0, fR0, fMu);
 
     fThickIntegrand = MakeThicknessIntegrand();
-}
-
-Double_t Nucleus::EvalDensity(Double_t r) {
-    return fDensity->Eval(r);
-}
-/*
-Double_t Nucleus::EvalIntegrand(Double_t r, Double_t b) {
-    return fDensity->Eval(r)*r/TMath::Sqrt(r*r-b*b);
-}
-*/
-/*
-Double_t Nucleus::EvalIntegral(Double_t b) {
-    TF1 *integrand = new TF1("integrand", EvalIntegrand, 0, fMaxR, 1);
-    integrand->SetParameter(0, b);
-    return integrand->Integral(b, DBL_MAX);
-}
-*/
-Double_t Nucleus::EvalIntegrand(Double_t *r, Double_t *par) { 
-    Double_t rr = r[0];
-    Double_t b = par[0];
-
-    return fDensity->Eval(rr)*rr/TMath::Sqrt(rr*rr-b*b);
-    //fThickIntegrand->SetParameter(0, bb);
+    fThickness = MakeThicknessFunc();
 }
 
 //function object (functor) 
@@ -114,24 +90,17 @@ Double_t Nucleus::Thickness(Double_t *b, Double_t *) {
     return fThickIntegrand->Integral(bb, fMaxR);
 }
 
-TF1* Nucleus::ThicknessTF1(){
+TF1* Nucleus::MakeThicknessFunc(){
     ThicknessFunc *thickfunc = new ThicknessFunc(fThickIntegrand);
     TF1 *thickness = new TF1("thickness", thickfunc, 0, 10, 0, "ThickFunc");
-    //TF1 *thickness = new TF1("thickness", "x", 0, 10);
     return thickness;
 }
     
 
 TF1* Nucleus::MakeThicknessIntegrand() {
     //we have T(b) = integral(rho(r) dz) and r = sqrt(b^2+z^2) so we convert dz in terms of r and b and then can integrate with respect to r
-    //fThickIntegrand = new TF1("integrand", "fDensity*x/(sqrt(x*x-[0]*[0]))", 0, fMaxR); 
-    //ThicknessIntegrandFunc *integrand = new ThicknessIntegrandFunc("fDensity")
     TF1 *fThickIntegrand = new TF1("fThickIntegrand", "fDensity*x/TMath::Sqrt(x*x-[0]*[0])", 0, fMaxR); 
-    MyIntegFunc *intg = new MyIntegFunc(fThickIntegrand);
-    TF1 *fThickness = new TF1("fThickness", intg, 0, fMaxR, 1, "MyIntegFunc");
-    //TF1 *thickness = new TF1("thickness", EvalIntegrand, 0, fMaxR, 0); //evalIntegrand is a C function that returns the thickness at a given impact paramter (the 0 in the fifth spot here specifies that evalIntegrand takes no paramters other than b)
     return fThickIntegrand;
-    //return fThickness;
 }
         
 //Collision Class-contains two nucleus objects (possibly identical?) and then also has 2-d particle density funciton and method to get values given input locations
