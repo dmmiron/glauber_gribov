@@ -68,8 +68,8 @@ Collision::Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB) {
     //fsigNN = CalcSigNN();
 }
 
-/*
+
 void Collision::Update() {
 
 }
-*/
+
