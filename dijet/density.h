@@ -10,8 +10,6 @@ class Nucleus;
 #include <TString.h>
 #include <limits>
 
-
-
 class Nucleus 
 {
     private:
@@ -39,6 +37,26 @@ class Nucleus
         void         SetR0(Double_t iR0);
         void         SetMu(Double_t iMu);
 };
+
+class Collision {
+    private:
+        Nucleus*    fNucleusA;
+        Nucleus*    fNucleusB;
+        Double_t    fB; //impact parameter
+        Double_t    fSigNN;
+        void        Update();
+
+    public:
+        Collision(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1, Double_t iB=0);
+        Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB=0);
+
+        Nucleus*    GetNucleusA()   const {return fNucleusA;}
+        Nucleus*    GetNucleusB()   const {return fNucleusB;}
+        Double_t    GetImpact()     const {return fB;}
+        Double_t    GetSigNN()      const {return fSigNN;}
+};
+
+        
 
 //Functors for calculating derivatives and integrals of TF1 functions.
 struct MyDerivFunc { 

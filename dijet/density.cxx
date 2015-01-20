@@ -9,6 +9,21 @@ Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
     Update(); //sets fDensity and fThickness
 }
 
+void Nucleus::SetRho0(Double_t iRho0) {
+    fRho0 = iRho0;
+    Update();
+}
+
+void Nucleus::SetR0(Double_t iR0) {
+    fRho0 = iR0;
+    Update();
+}
+
+void Nucleus::SetMu(Double_t iMu) {
+    fRho0 = iMu;
+    Update();
+}
+
 void Nucleus::Update() {
     if (fR0 >= fMu) 
         fMaxR = 10*fR0;
@@ -36,3 +51,25 @@ TF1* Nucleus::MakeThicknessIntegrand() {
 }
         
 //Collision Class-contains two nucleus objects (possibly identical?) and then also has 2-d particle density funciton and method to get values given input locations
+
+Collision::Collision(Double_t iRho0, Double_t iR0, Double_t iMu, Double_t iB) {
+    fNucleusA = new Nucleus(iRho0, iR0, iMu);
+    fNucleusB = new Nucleus(iRho0, iR0, iMu);
+    fB = iB;
+    fSigNN = 0.0; //TEMPORARY
+    //fsigNN = CalcSigNN();
+}
+
+Collision::Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB) {
+    fNucleusA = iNucleusA;
+    fNucleusB = iNucleusB;
+    fB = iB;
+    fSigNN = 0.0; //TEMPORARY
+    //fsigNN = CalcSigNN();
+}
+
+/*
+void Collision::Update() {
+
+}
+*/
