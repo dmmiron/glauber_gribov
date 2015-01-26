@@ -40,11 +40,24 @@ class Nucleus
 
 class Collision {
     private:
-        Nucleus*    fNucleusA;
-        Nucleus*    fNucleusB;
+        Nucleus*    fNucleusA; //considered at position (fB/2, 0, 0)
+        Nucleus*    fNucleusB; //considiered at position (-fB/2, 0, 0)
         Double_t    fB; //impact parameter
         Double_t    fSigNN;
+        //All TFs functions of distance from center of nucleus except for PPart which is function of (x,y) coordinates to center of collision
+        TF1*        fNuA; //poission parameter for collision probability
+        TF1*        fNuB;
+        TF1*        fPScatA; //probability of at least one collision
+        TF1*        fPScatB;
+        TF2*        fPPart; //Function for number of particles scattering as function of location (x,y)
         void        Update();
+        Double_t    CalcSigNN();
+        TF1*        CalcNuA(); 
+        TF1*        CalcNuB();
+        TF1*        CalcPScatA();
+        TF1*        CalcPScatB();
+        Double_t    CalcSA(Double_t x, Double_t y);
+        Double_t    CalcSB(Double_t x, Double_t y);
 
     public:
         Collision(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1, Double_t iB=0);
@@ -54,6 +67,9 @@ class Collision {
         Nucleus*    GetNucleusB()   const {return fNucleusB;}
         Double_t    GetImpact()     const {return fB;}
         Double_t    GetSigNN()      const {return fSigNN;}
+        TF1*        GetNuA()        const {return fNuA;}
+        TF1*        GetPScatA()     const {return fPScatA;}
+
 };
 
         
@@ -84,6 +100,33 @@ struct ThicknessFunc {
         Double_t b = *x;
         fFunc->SetParameter(0, b);
         return fFunc->Integral(b, 10);
+    }
+    TF1 *fFunc;
+};
+
+struct MultFunc {
+    MultFunc(TF1 *f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) const {
+        Double_t mult = *par;
+        return fFunc->Eval(*x)*mult;
+    }
+    TF1 *fFunc;
+};
+
+struct PScat {
+    PScat(TF1 *f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) const {
+        Double_t val = *x;
+        return (1-(TMath::Exp((-1)*(val))));
+    }
+    TF1 *fFunc;
+};
+
+//to easily use TF1 to make new TF1
+struct EvalFunc {
+    EvalFunc(TF1 *f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) const {
+        return fFunc->Eval(*x);
     }
     TF1 *fFunc;
 };

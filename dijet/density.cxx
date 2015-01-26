@@ -56,20 +56,55 @@ Collision::Collision(Double_t iRho0, Double_t iR0, Double_t iMu, Double_t iB) {
     fNucleusA = new Nucleus(iRho0, iR0, iMu);
     fNucleusB = new Nucleus(iRho0, iR0, iMu);
     fB = iB;
-    fSigNN = 0.0; //TEMPORARY
-    //fsigNN = CalcSigNN();
+    fsigNN = CalcSigNN();
+    Update();
 }
 
 Collision::Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB) {
     fNucleusA = iNucleusA;
     fNucleusB = iNucleusB;
     fB = iB;
-    fSigNN = 0.0; //TEMPORARY
-    //fsigNN = CalcSigNN();
+    fsigNN = CalcSigNN();
+    Update();
 }
 
 
 void Collision::Update() {
+    fNuA = CalcNuA();
+    fPScatA = CalcPScatA();
 
 }
 
+//maybe should be more accurately lookup sigNN?
+//TEMPORARY NOT YET REALLY BUILT
+Double_t Collision::CalcSigNN() {
+    return fSigNN = 64.0; 
+}
+
+Double_t Collision::CalcSA(Double_t x, Double_t y) {
+    Double_t sx = x-(fB/2.0);
+    Double_t sy = y;
+    return TMath::Sqrt(sx*sx+sy*sy);
+}
+
+Double_t Collision::CalcSB(Double_t x, Double_t y) {
+    Double_t sx = x+(fB/2.0);
+    Double_t sy = y;
+    return TMath::Sqrt(sx*sx+sy*sy);
+}
+
+TF1* Collision::CalcNuA() {
+    TF1* thickness = fNucleusA->GetThicknessFunc();
+    MultFunc *multFunc = new MultFunc(thickness);
+    TF1* NuA = new TF1("NuA", multFunc, 0, 10, 1, "multFunc");
+    NuA->SetParameter(0, fSigNN);
+    //cout << NuA->Eval(1) << endl;
+    return NuA;
+}
+
+TF1* Collision::CalcPScatA() {
+    PScat *pScat = new PScat(fNuA);
+    TF1* PScatA = new TF1("NuA", pScat, 0, 10, 0, "PScat");
+    cout << PScatA->Eval(1) << endl;
+    return PScatA;
+}
