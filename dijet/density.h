@@ -116,7 +116,7 @@ struct MultFunc {
 struct PScat {
     PScat(TF1 *f): fFunc(f) {}
     Double_t operator() (Double_t *x, Double_t *par) const {
-        Double_t val = *x;
+        Double_t val = fFunc->Eval(*x);
         return (1-(TMath::Exp((-1)*(val))));
     }
     TF1 *fFunc;
