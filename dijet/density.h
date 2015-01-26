@@ -56,6 +56,7 @@ class Collision {
         TF1*        CalcNuB();
         TF1*        CalcPScatA();
         TF1*        CalcPScatB();
+        TF2*        CalcPPart();
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
 
@@ -68,7 +69,10 @@ class Collision {
         Double_t    GetImpact()     const {return fB;}
         Double_t    GetSigNN()      const {return fSigNN;}
         TF1*        GetNuA()        const {return fNuA;}
+        TF1*        GetNuB()        const {return fNuB;}
         TF1*        GetPScatA()     const {return fPScatA;}
+        TF1*        GetPScatB()     const {return fPScatB;}
+        TF2*        GetPPart()      const {return fPPart;}
 
 };
 
@@ -121,6 +125,26 @@ struct PScat {
     }
     TF1 *fFunc;
 };
+
+struct PPart {
+    PPart(TF1 *iTA, TF1 *iTB, TF1 *iPScatA, TF1 *iPScatB): fTA(iTA), fTB(iTB), fPScatA(iPScatA), fPScatB(iPScatB) {}
+    Double_t operator() (Double_t *in, Double_t *par) const {
+        Double_t x = in[0];
+        Double_t y = in[1];
+        Double_t b = par[0];
+        Double_t offset = b/2.0;
+        Double_t xa = x-offset;
+        Double_t xb = x+offset;
+        Double_t sa = TMath::Sqrt(xa*xa+y*y);
+        Double_t sb = TMath::Sqrt(xb*xb+y*y);
+        return (fTA->Eval(sa))*(fPScatB->Eval(sb))+(fTB->Eval(sb))*(fPScatA->Eval(sa));
+    }
+    TF1 *fTA;
+    TF1 *fTB;
+    TF1 *fPScatA;
+    TF1 *fPScatB;
+};
+
 
 //to easily use TF1 to make new TF1
 struct EvalFunc {

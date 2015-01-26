@@ -71,7 +71,10 @@ Collision::Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB) {
 
 void Collision::Update() {
     fNuA = CalcNuA();
+    fNuB = CalcNuB();
     fPScatA = CalcPScatA();
+    fPScatB = CalcPScatB();
+    fPPart = CalcPPart();
 
 }
 
@@ -108,3 +111,28 @@ TF1* Collision::CalcPScatA() {
     cout << PScatA->Eval(1) << endl;
     return PScatA;
 }
+
+TF1* Collision::CalcNuB() {
+    TF1* thickness = fNucleusB->GetThicknessFunc();
+    MultFunc *multFunc = new MultFunc(thickness);
+    TF1* NuB = new TF1("NuA", multFunc, 0, 10, 1, "multFunc");
+    NuB->SetParameter(0, fSigNN);
+    //cout << NuB->Eval(1) << endl;
+    return NuB;
+}
+
+TF1* Collision::CalcPScatB() {
+    PScat *pScat = new PScat(fNuA);
+    TF1* PScatB = new TF1("NuA", pScat, 0, 10, 0, "PScat");
+    //cout << PScatB->Eval(1) << endl;
+    return PScatB;
+}
+
+TF2* Collision::CalcPPart() {
+    PPart *pPart = new PPart(fNucleusA->GetThicknessFunc(), fNucleusB->GetThicknessFunc(), fPScatA, fPScatB);
+    TF2* PPart = new TF2("PPart", pPart, -5, 5, -5, 5, 1, "PPart");
+    PPart->SetParameter(0, fB);
+    cout << PPart->Eval(1, 1);
+    return PPart;
+}
+
