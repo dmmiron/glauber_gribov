@@ -2,7 +2,6 @@
 #define DENSITY_CXX
 
 class Nucleus;
-
 #include <TMath.h>
 #include <TF1.h>
 #include <TF2.h>
@@ -74,6 +73,7 @@ class Collision {
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
 
+        TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
 };
 
         
@@ -155,5 +155,23 @@ struct EvalFunc {
     TF1 *fFunc;
 };
 
+struct JetIntegrand {
+    JetIntegrand(TF2 *f): fFunc(f) {}
+    //4 parameters, alpha, theta, x_0, y_0
+    //takes a two d density function
+    Double_t operator() (Double_t *x, Double_t *par) const {
+        Double_t alpha = par[0];
+        Double_t x0    = par[1];
+        Double_t y0    = par[2];
+        Double_t theta = par[3];
+        Double_t xx    = x[0];
+        Double_t yy    = xx*TMath::Tan(theta);
+        //l squared
+        Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
+        Double_t lAlpha = TMath::Power(l2, alpha/2.0);
+        return (fFunc->Eval(xx, yy))*lAlpha/TMath::Cos(theta);
+    }
+    TF2 *fFunc;
+};
 
 #endif
