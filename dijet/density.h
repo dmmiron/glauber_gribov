@@ -164,13 +164,36 @@ struct JetIntegrand {
         Double_t x0    = par[1];
         Double_t y0    = par[2];
         Double_t theta = par[3];
-        Double_t xx    = x[0] + x0;
-        Double_t yy    = xx*TMath::Tan(theta) + y0;
+        Double_t xx;
+        Double_t yy;
+        //integrate with respect to y if jet is vertical
+        Double_t cosTheta = TMath::Cos(theta);
+        Double_t sinTheta = TMath::Sin(theta);
+        if (cosTheta == 0) { //integrate wrt y
+            if (sinTheta == 1) { //dy > 0 
+                cout << "wrt y" << endl;
+                yy = x[0] + y0;
+                xx = 0    + x0; //xx = yy/cot(theta), but cot(theta) = + /- inf
+            }
+            else { //dy > 0
+                yy = -1*x[0] + y0;
+                xx = 0       + x0;
+            }
+        }
+        else { //integrate wrt x
+            if (cosTheta > 0) { //dx>0
+                xx = x[0]                 + x0;
+                yy = xx*TMath::Tan(theta) + y0;
+            }
+            else 
+                xx = -1*x[0]              + x0;
+                yy = xx*TMath::Tan(theta) + y0;
+        }
         //l squared
         Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
         Double_t lAlpha = TMath::Power(l2, alpha/2.0);
-        //cout << lAlpha << "alpha " << xx << "xx " << yy << "yy " << endl;
-        cout << TMath::Abs(TMath::Cos(theta)) << endl;
+        cout << lAlpha << "alpha " << xx << "xx " << yy << "yy " << endl;
+        //cout << TMath::Abs(TMath::Cos(theta)) << endl;
         return (fFunc->Eval(xx, yy))*lAlpha/TMath::Abs(TMath::Cos(theta));
     }
     TF2 *fFunc;
