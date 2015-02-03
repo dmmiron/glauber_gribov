@@ -152,6 +152,9 @@ TF2* Collision::CalcPPart() {
 }
 
 TF1* Collision::CalcJetIntegrand(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+    //convert degrees to radians
+    theta = theta*TMath::Pi()/180.0;
+
     JetIntegrand *jInt = new JetIntegrand(fPPart);
     cout << fPPart->Eval(0, 0);
     //Temporary fix limit of integration at 100
