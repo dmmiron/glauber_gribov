@@ -72,8 +72,9 @@ class Collision {
         TF1*        GetPScatA()     const {return fPScatA;}
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
-
         TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+
 };
 
         
@@ -171,7 +172,6 @@ struct JetIntegrand {
         Double_t sinTheta = TMath::Sin(theta);
         if (cosTheta == 0) { //integrate wrt y
             if (sinTheta == 1) { //dy > 0 
-                cout << "wrt y" << endl;
                 yy = x[0] + y0;
                 xx = 0    + x0; //xx = yy/cot(theta), but cot(theta) = + /- inf
             }
@@ -192,7 +192,6 @@ struct JetIntegrand {
         //l squared
         Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
         Double_t lAlpha = TMath::Power(l2, alpha/2.0);
-        cout << lAlpha << "alpha " << xx << "xx " << yy << "yy " << endl;
         //cout << TMath::Abs(TMath::Cos(theta)) << endl;
         return (fFunc->Eval(xx, yy))*lAlpha/TMath::Abs(TMath::Cos(theta));
     }

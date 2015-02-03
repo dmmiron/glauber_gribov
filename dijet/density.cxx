@@ -158,7 +158,13 @@ TF1* Collision::CalcJetIntegrand(Double_t alpha=1, Double_t x0=0, Double_t y0=0,
     JetIntegrand *jInt = new JetIntegrand(fPPart);
     cout << fPPart->Eval(0, 0);
     //Temporary fix limit of integration at 100
-    TF1* JetInt = new TF1("jInt", jInt, 0, 10, 4, "JetIntegrand"); 
+    TF1* JetInt = new TF1("jInt", jInt, 0, TMath::Infinity(), 4, "JetIntegrand"); 
     JetInt->SetParameters(alpha, x0, y0, theta);
     return JetInt;
 }
+
+Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+    TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, theta);
+    return JetInt->Integral(0, TMath::Infinity());
+}
+    
