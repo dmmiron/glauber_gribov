@@ -32,11 +32,11 @@ void Nucleus::Update() {
     else
         fMaxR = 10*fMu;
     //ask about typical values for mu and r0 to determine limiting case
-    fDensity = new TF1("fDensity", "[0]/(exp((x-[1])/[2])+1)", 0, fMaxR);
+    fDensity = new TF1("fDensity", "[0]/(exp((x-[1])/[2])+1)", 0, INFTY);
     fDensity->SetParameters(1, fR0, fMu);
 
     
-    temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, fMaxR);
+    temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, INFTY);
     //Fix SHOULD GO TO INFINITI
     //Normalize woods-saxon so that integral over all space gives total number of nucleons
      
@@ -54,14 +54,14 @@ void Nucleus::Update() {
 
 TF1* Nucleus::MakeThicknessFunc(){
     ThicknessFunc *thickfunc = new ThicknessFunc(fThickIntegrand);
-    TF1 *thickness = new TF1("thickness", thickfunc, 0, 10, 0, "ThickFunc");
+    TF1 *thickness = new TF1("thickness", thickfunc, 0, INFTY, 0, "ThickFunc");
     return thickness;
 }
     
 
 TF1* Nucleus::MakeThicknessIntegrand() {
     //we have T(b) = integral(rho(r) dz) and r = sqrt(b^2+z^2) so we convert dz in terms of r and b and then can integrate with respect to r
-    TF1 *fThickIntegrand = new TF1("fThickIntegrand", "fDensity*x/TMath::Sqrt(x*x-[0]*[0])", 0, fMaxR); 
+    TF1 *fThickIntegrand = new TF1("fThickIntegrand", "fDensity*x/TMath::Sqrt(x*x-[0]*[0])", 0, INFTY); 
     return fThickIntegrand;
 }
         
@@ -113,7 +113,7 @@ Double_t Collision::CalcSB(Double_t x, Double_t y) {
 
 TF1* Collision::CalcNuA() { TF1* thickness = fNucleusA->GetThicknessFunc();
     MultFunc *multFunc = new MultFunc(thickness);
-    TF1* NuA = new TF1("NuA", multFunc, 0, 10, 1, "multFunc");
+    TF1* NuA = new TF1("NuA", multFunc, 0, INFTY, 1, "multFunc");
     NuA->SetParameter(0, fSigNN);
     //cout << NuA->Eval(1) << endl;
     return NuA;
@@ -121,7 +121,7 @@ TF1* Collision::CalcNuA() { TF1* thickness = fNucleusA->GetThicknessFunc();
 
 TF1* Collision::CalcPScatA() {
     PScat *pScat = new PScat(fNuA);
-    TF1* PScatA = new TF1("NuA", pScat, 0, 10, 0, "PScat");
+    TF1* PScatA = new TF1("NuA", pScat, 0, INFTY, 0, "PScat");
     cout << PScatA->Eval(1) << endl;
     return PScatA;
 }
@@ -129,7 +129,7 @@ TF1* Collision::CalcPScatA() {
 TF1* Collision::CalcNuB() {
     TF1* thickness = fNucleusB->GetThicknessFunc();
     MultFunc *multFunc = new MultFunc(thickness);
-    TF1* NuB = new TF1("NuA", multFunc, 0, 10, 1, "multFunc");
+    TF1* NuB = new TF1("NuA", multFunc, 0, INFTY, 1, "multFunc");
     NuB->SetParameter(0, fSigNN);
     //cout << NuB->Eval(1) << endl;
     return NuB;
@@ -137,14 +137,14 @@ TF1* Collision::CalcNuB() {
 
 TF1* Collision::CalcPScatB() {
     PScat *pScat = new PScat(fNuA);
-    TF1* PScatB = new TF1("NuA", pScat, 0, 10, 0, "PScat");
+    TF1* PScatB = new TF1("NuA", pScat, 0, INFTY, 0, "PScat");
     //cout << PScatB->Eval(1) << endl;
     return PScatB;
 }
 
 TF2* Collision::CalcPPart() {
     PPart *pPart = new PPart(fNucleusA->GetThicknessFunc(), fNucleusB->GetThicknessFunc(), fPScatA, fPScatB);
-    TF2* PPart = new TF2("PPart", pPart, -6, 6, -6, 6, 1, "PPart");
+    TF2* PPart = new TF2("PPart", pPart, -INFTY, INFTY, -INFTY, INFTY, 1, "PPart");
     PPart->SetParameter(0, fB);
     cout << fB << endl;
     //cout << PPart->Eval(1, 1);
@@ -158,13 +158,13 @@ TF1* Collision::CalcJetIntegrand(Double_t alpha=1, Double_t x0=0, Double_t y0=0,
     JetIntegrand *jInt = new JetIntegrand(fPPart);
     cout << fPPart->Eval(0, 0);
     //Temporary fix limit of integration at 100
-    TF1* JetInt = new TF1("jInt", jInt, 0, TMath::Infinity(), 4, "JetIntegrand"); 
+    TF1* JetInt = new TF1("jInt", jInt, 0, INFTY, 4, "JetIntegrand"); 
     JetInt->SetParameters(alpha, x0, y0, theta);
     return JetInt;
 }
 
 Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
     TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, theta);
-    return JetInt->Integral(0, TMath::Infinity());
+    return JetInt->Integral(0, INFTY);
 }
     

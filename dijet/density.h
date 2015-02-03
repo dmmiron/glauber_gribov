@@ -2,12 +2,16 @@
 #define DENSITY_CXX
 
 class Nucleus;
+class Collision;
+
 #include <TMath.h>
 #include <TF1.h>
 #include <TF2.h>
 #include <TFile.h>
 #include <TString.h>
 #include <limits>
+
+const Double_t INFTY = TMath::Infinity();
 
 class Nucleus 
 {
@@ -104,7 +108,7 @@ struct ThicknessFunc {
     Double_t operator() (Double_t *x, Double_t *par) const{
         Double_t b = *x;
         fFunc->SetParameter(0, b);
-        return fFunc->Integral(b, 10);
+        return fFunc->Integral(b, INFTY);
     }
     TF1 *fFunc;
 };
