@@ -77,7 +77,8 @@ class Collision {
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
         TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
-        Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
 
 };
 
@@ -96,7 +97,7 @@ struct MyIntegFunc {
     MyIntegFunc(TF1 *f): fFunc(f) {}
     Double_t operator() (Double_t *x, Double_t *par) const {
         Double_t a = fFunc->GetXmin();
-        return fFunc->Integral(a, *x);
+        return fFunc->Integral(a, *x, 0.0001);
     }
     TF1 *fFunc;
 };
@@ -202,4 +203,16 @@ struct JetIntegrand {
     TF2 *fFunc;
 };
 
+struct CalcJet {
+    CalcJet(TF1* f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) {
+        Double_t alpha = par[0];
+        Double_t x0 = par[1]; 
+        Double_t y0 = par[2];
+        Double_t theta = x[0];
+        fFunc->SetParameters(alpha, x0, y0, theta);
+        return fFunc->Integral(0, INFTY, 0.0001);
+    }
+    TF1* fFunc;
+};
 #endif
