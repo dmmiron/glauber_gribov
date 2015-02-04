@@ -4,7 +4,7 @@ using namespace std;
 
 //Test Case: 1, 6.62, .546
 Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
-    ROOT::Math::IntegratorOneDimOptions::SetDefaultIntegrator("gausslegendre");
+    //ROOT::Math::IntegratorOneDimOptions::SetDefaultIntegrator("gausslegendre");
     fRho0 = iRho0;
     fR0   = iR0;
     fMu   = iMu;

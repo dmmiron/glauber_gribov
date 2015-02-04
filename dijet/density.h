@@ -108,7 +108,7 @@ struct ThicknessFunc {
     Double_t operator() (Double_t *x, Double_t *par) const{
         Double_t b = *x;
         fFunc->SetParameter(0, b);
-        return fFunc->Integral(b, INFTY);
+        return fFunc->Integral(b, INFTY, 0.0001);
     }
     TF1 *fFunc;
 };
