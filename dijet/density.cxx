@@ -3,20 +3,15 @@
 using namespace std;
 
 //Test Case: 1, 6.62, .546
-Nucleus::Nucleus(Double_t iRho0, Double_t iR0, Double_t iMu) {
+Nucleus::Nucleus(Double_t iR0, Double_t iMu) {
     //ROOT::Math::IntegratorOneDimOptions::SetDefaultIntegrator("gausslegendre");
-    fRho0 = iRho0;
     fR0   = iR0;
     fMu   = iMu;
     Update(); //sets fDensity and fThickness
 }
 
-void Nucleus::SetRho0(Double_t iRho0) {
-    fRho0 = iRho0;
-    Update();
-}
 void Nucleus::SetR0(Double_t iR0) {
-    fRho0 = iR0;
+    fR0 = iR0;
     Update();
 }
 
@@ -26,19 +21,16 @@ void Nucleus::SetMu(Double_t iMu) {
 }
 
 void Nucleus::Update() {
-    if (fR0 >= fMu) 
-        fMaxR = 10*fR0;
-    else
-        fMaxR = 10*fMu;
-    //ask about typical values for mu and r0 to determine limiting case
+
     fDensity = new TF1("fDensity", "[0]/(exp((x-[1])/[2])+1)", 0, INFTY);
+    //normalization, mean radius, scale factor
     fDensity->SetParameters(1, fR0, fMu);
 
-    temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, INFTY);
-    //Fix SHOULD GO TO INFINITI
     //Normalize woods-saxon so that integral over all space gives total number of nucleons
-     
+    temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, INFTY);
     Double_t normalization = temp->Integral(0, 100);
+    //Will eventually keep track of # of nucleons instead of hard code
+    fRho0 = 208.0/normalization;
     //cout << 208.0/normalization << endl;
     fDensity->SetParameter(0, 208.0/normalization);
     temp->SetParameter(0, 208.0/normalization);
@@ -63,9 +55,9 @@ TF1* Nucleus::MakeThicknessIntegrand() {
         
 //Collision Class-contains two nucleus objects (possibly identical?) and then also has 2-d particle density funciton and method to get values given input locations
 
-Collision::Collision(Double_t iRho0, Double_t iR0, Double_t iMu, Double_t iB) {
-    fNucleusA = new Nucleus(iRho0, iR0, iMu);
-    fNucleusB = new Nucleus(iRho0, iR0, iMu);
+Collision::Collision(Double_t iR0, Double_t iMu, Double_t iB) {
+    fNucleusA = new Nucleus(iR0, iMu);
+    fNucleusB = new Nucleus(iR0, iMu);
     fB = iB;
     fsigNN = CalcSigNN();
     Update();

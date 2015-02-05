@@ -12,6 +12,7 @@ class Collision;
 #include <limits>
 
 const Double_t INFTY = TMath::Infinity();
+const Double_t EPSILON = pow(10, -6);
 
 class Nucleus 
 {
@@ -22,12 +23,11 @@ class Nucleus
         TF1*        fDensity; //nucleon density function
         TF1*        fThickness; //thickness as function of distance from center (impact parameter)
         TF1*        fThickIntegrand; //Integrand used for thickness funciton
-        Double_t    fMaxR;      //maximum r used for calculating integrals
         void        Update();  // sets fDensity and fThickness
         TF1*        MakeThicknessIntegrand();
         TF1*        MakeThicknessFunc();
     public:
-        Nucleus(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1);
+        Nucleus(Double_t iR0=6.62, Double_t iMu=.546); //default to lead
         
         Double_t     GetRho0()                 const {return fRho0;}
         Double_t     GetR0()                   const {return fR0;}
@@ -36,7 +36,6 @@ class Nucleus
         Double_t     GetThickness(Double_t b)  const {return fThickness->Eval(b);}
         TF1*         GetDensityFunc()          const {return fDensity;}
         TF1*         GetThicknessFunc()        const {return fThickness;}
-        void         SetRho0(Double_t iRho0);
         void         SetR0(Double_t iR0);
         void         SetMu(Double_t iMu);
 };
@@ -64,7 +63,7 @@ class Collision {
         Double_t    CalcSB(Double_t x, Double_t y);
 
     public:
-        Collision(Double_t iRho0=1, Double_t iR0=1, Double_t iMu=1, Double_t iB=0);
+        Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
         Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB=0);
 
         Nucleus*    GetNucleusA()   const {return fNucleusA;}
@@ -97,7 +96,7 @@ struct MyIntegFunc {
     MyIntegFunc(TF1 *f): fFunc(f) {}
     Double_t operator() (Double_t *x, Double_t *par) const {
         Double_t a = fFunc->GetXmin();
-        return fFunc->Integral(a, *x, 0.0001);
+        return fFunc->Integral(a, *x, EPSILON);
     }
     TF1 *fFunc;
 };
@@ -109,7 +108,7 @@ struct ThicknessFunc {
     Double_t operator() (Double_t *x, Double_t *par) const{
         Double_t b = *x;
         fFunc->SetParameter(0, b);
-        return fFunc->Integral(b, INFTY, 0.0001);
+        return 2*fFunc->Integral(b, INFTY, EPSILON);
     }
     TF1 *fFunc;
 };
@@ -143,6 +142,7 @@ struct PPart {
         Double_t xb = x+offset;
         Double_t sa = TMath::Sqrt(xa*xa+y*y);
         Double_t sb = TMath::Sqrt(xb*xb+y*y);
+        //cout << xa << "xa " << xb << "xb " << sa << "sa " << sb << "sb " << fTA->Eval(sa) << "fTA " << fTB->Eval(sb) << "fTB " << fPScatA->Eval(sa) << "fpscatA " << fPScatB->Eval(sb) << "fpscatB" << endl;
         return (fTA->Eval(sa))*(fPScatB->Eval(sb))+(fTB->Eval(sb))*(fPScatA->Eval(sa));
     }
     TF1 *fTA;
@@ -170,11 +170,13 @@ struct JetIntegrand {
         Double_t x0    = par[1];
         Double_t y0    = par[2];
         Double_t theta = par[3];
-        Double_t xx;
-        Double_t yy;
+        Double_t l = x[0];
         //integrate with respect to y if jet is vertical
         Double_t cosTheta = TMath::Cos(theta);
         Double_t sinTheta = TMath::Sin(theta);
+        Double_t xx = l*cosTheta + x0;
+        Double_t yy = l*sinTheta + y0;
+        /*
         if (cosTheta == 0) { //integrate wrt y
             if (sinTheta == 1) { //dy > 0 
                 yy = x[0] + y0;
@@ -194,11 +196,12 @@ struct JetIntegrand {
                 xx = -1*x[0]              + x0;
                 yy = xx*TMath::Tan(theta) + y0;
         }
+        */
         //l squared
-        Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
-        Double_t lAlpha = TMath::Power(l2, alpha/2.0);
+        //Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
+        Double_t lAlpha = TMath::Power(l, alpha);
         //cout << TMath::Abs(TMath::Cos(theta)) << endl;
-        return (fFunc->Eval(xx, yy))*lAlpha/TMath::Abs(TMath::Cos(theta));
+        return (fFunc->Eval(xx, yy))*lAlpha;
     }
     TF2 *fFunc;
 };
@@ -211,7 +214,7 @@ struct CalcJet {
         Double_t y0 = par[2];
         Double_t theta = x[0];
         fFunc->SetParameters(alpha, x0, y0, theta);
-        return fFunc->Integral(0, INFTY, 0.0001);
+        return fFunc->Integral(0, INFTY, EPSILON);
     }
     TF1* fFunc;
 };
