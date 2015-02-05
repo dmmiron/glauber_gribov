@@ -218,4 +218,20 @@ struct CalcJet {
     }
     TF1* fFunc;
 };
+
+struct Moment2 {
+    Moment2(TF2* f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) {
+        Double_t xx = x[0];
+        Double_t yy = x[1];
+        Double_t nx = par[0];
+        Double_t ny = par[1];
+        //cout << pow(xx, nx) << endl;
+        //cout << pow(xx, nx)*pow(yy, ny)*fFunc->Eval(xx, yy) << endl;
+        return pow(xx, nx)*pow(yy, ny)*fFunc->Eval(xx, yy);
+    }
+    TF2* fFunc;
+};
+        
+
 #endif

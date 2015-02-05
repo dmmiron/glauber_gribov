@@ -164,4 +164,22 @@ TF1* Collision::JetOfTheta(Double_t alpha=1, Double_t x0=0, Double_t y0=0) {
     return JetTheta;
 }
 
+Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100) {
+    Moment2* intg = new Moment2(f);
+    TF2* density = new TF2("density", intg, -INFTY, INFTY, -INFTY, INFTY, 2, "Moment2");
+    density->SetParameters(nx, ny);
+    //return density->Integral(-INFTY, INFTY, -INFTY, INFTY);
+    return density->Integral(xmin, xmax, ymin, ymax, EPSILON);
+}
+    
+
+
+Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100) {
+    Double_t RMSx = CalcMoment2(f, 2, 0, xmin, xmax, ymin, ymax);
+    Double_t RMSy = CalcMoment2(f, 0, 2, xmin, xmax, ymin, ymax);
+    return (RMSx-RMSy)/(RMSx+RMSy);
+}
+   
+     
+    
     
