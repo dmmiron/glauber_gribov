@@ -165,6 +165,11 @@ TF1* Collision::JetOfTheta(Double_t alpha=1, Double_t x0=0, Double_t y0=0) {
     return JetTheta;
 }
 
+Double_t Collision::JetIntegral(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+    TF1* JetTheta = JetOfTheta(alpha, x0, y0);
+    return JetTheta->Eval(theta);
+}
+
 Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100) {
     Moment2* intg = new Moment2(f);
     TF2* density = new TF2("density", intg, -INFTY, INFTY, -INFTY, INFTY, 2, "Moment2");
@@ -189,3 +194,15 @@ TF2* Collision::CalcRhoJet() {
     rhoJet->SetParameter(0, fB);
     return rhoJet;
 }
+
+Double_t Collision::SampleJet(Double_t alpha=1) {
+    Double_t x;
+    Double_t y;
+    fRhoJet->SetRange(-10, -10, 10, 10);
+    fRhoJet->GetRandom2(x, y);
+    TF1* uniform = new TF1("uniform", "1", 0, 360);
+    //ask about how we should generate this value since it's just uniform (do we want seed transparency?)
+    Double_t theta = uniform->GetRandom();
+    return JetIntegral(alpha, x, y, theta); 
+}
+
