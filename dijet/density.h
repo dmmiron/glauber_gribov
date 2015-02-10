@@ -12,7 +12,7 @@ class Collision;
 #include <limits>
 
 const Double_t INFTY = TMath::Infinity();
-const Double_t EPSILON = pow(10, -6);
+const Double_t EPSILON = pow(10, -7);
 
 class Nucleus 
 {
@@ -52,6 +52,7 @@ class Collision {
         TF1*        fPScatA; //probability of at least one collision
         TF1*        fPScatB;
         TF2*        fPPart; //Function for number of particles scattering as function of location (x,y)
+        TF2*        fRhoJet; //density of jet events
         void        Update();
         Double_t    CalcSigNN();
         TF1*        CalcNuA(); 
@@ -59,6 +60,7 @@ class Collision {
         TF1*        CalcPScatA();
         TF1*        CalcPScatB();
         TF2*        CalcPPart();
+        TF2*        CalcRhoJet();
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
 
@@ -75,6 +77,7 @@ class Collision {
         TF1*        GetPScatA()     const {return fPScatA;}
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
+        TF2*        GetRhoJet()     const {return fRhoJet;}
         TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
@@ -171,32 +174,10 @@ struct JetIntegrand {
         Double_t y0    = par[2];
         Double_t theta = par[3];
         Double_t l = x[0];
-        //integrate with respect to y if jet is vertical
         Double_t cosTheta = TMath::Cos(theta);
         Double_t sinTheta = TMath::Sin(theta);
         Double_t xx = l*cosTheta + x0;
         Double_t yy = l*sinTheta + y0;
-        /*
-        if (cosTheta == 0) { //integrate wrt y
-            if (sinTheta == 1) { //dy > 0 
-                yy = x[0] + y0;
-                xx = 0    + x0; //xx = yy/cot(theta), but cot(theta) = + /- inf
-            }
-            else { //dy > 0
-                yy = -1*x[0] + y0;
-                xx = 0       + x0;
-            }
-        }
-        else { //integrate wrt x
-            if (cosTheta > 0) { //dx>0
-                xx = x[0]                 + x0;
-                yy = xx*TMath::Tan(theta) + y0;
-            }
-            else 
-                xx = -1*x[0]              + x0;
-                yy = xx*TMath::Tan(theta) + y0;
-        }
-        */
         //l squared
         //Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
         Double_t lAlpha = TMath::Power(l, alpha);
@@ -232,6 +213,22 @@ struct Moment2 {
     }
     TF2* fFunc;
 };
-        
+
+struct RhoJet {
+    RhoJet(TF1* iTA, TF1* iTB): fTA(iTA), fTB(iTB) {}
+    Double_t operator() (Double_t *in, Double_t *par) {
+        Double_t x = in[0];
+        Double_t y = in[1];
+        Double_t b = par[0];
+        Double_t offset = b/2.0;
+        Double_t xa = x-offset;
+        Double_t xb = x+offset;
+        Double_t ra = TMath::Sqrt(xa*xa+y*y);
+        Double_t rb = TMath::Sqrt(xb*xb+y*y);
+        return fTA->Eval(ra)*fTB->Eval(rb); //note that this has units of L^-4, but since we do not care about normalization we take the cross section coefficient to be one so this actually has units of L^-2
+    }
+    TF1* fTA;
+    TF1* fTB;
+};
 
 #endif

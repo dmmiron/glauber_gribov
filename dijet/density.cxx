@@ -78,13 +78,14 @@ void Collision::Update() {
     fPScatA = CalcPScatA();
     fPScatB = CalcPScatB();
     fPPart = CalcPPart();
+    fRhoJet = CalcRhoJet();
 
 }
 
 //maybe should be more accurately lookup sigNN?
 //TEMPORARY NOT YET REALLY BUILT
 Double_t Collision::CalcSigNN() {
-    return fSigNN = 64.0; 
+    return fSigNN = 6.40; 
 }
 
 Double_t Collision::CalcSA(Double_t x, Double_t y) {
@@ -179,7 +180,12 @@ Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ym
     Double_t RMSy = CalcMoment2(f, 0, 2, xmin, xmax, ymin, ymax);
     return (RMSx-RMSy)/(RMSx+RMSy);
 }
-   
-     
-    
-    
+
+TF2* Collision::CalcRhoJet() {
+    TF1* TA = fNucleusA->GetThicknessFunc();
+    TF1* TB = fNucleusB->GetThicknessFunc();
+    RhoJet* rho = new RhoJet(TA, TB);
+    TF2* rhoJet = new TF2("rhoJet", rho, -INFTY, INFTY, -INFTY, INFTY, 1, "RhoJet");
+    rhoJet->SetParameter(0, fB);
+    return rhoJet;
+}
