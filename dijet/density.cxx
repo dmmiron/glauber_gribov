@@ -195,10 +195,10 @@ TF2* Collision::CalcRhoJet() {
     return rhoJet;
 }
 
-Double_t Collision::SampleJet(Double_t alpha=1) {
+Double_t Collision::SampleJet(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
     Double_t x;
     Double_t y;
-    fRhoJet->SetRange(-10, -10, 10, 10);
+    fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     fRhoJet->GetRandom2(x, y);
     TF1* uniform = new TF1("uniform", "1", 0, 360);
     //ask about how we should generate this value since it's just uniform (do we want seed transparency?)
@@ -206,3 +206,12 @@ Double_t Collision::SampleJet(Double_t alpha=1) {
     return JetIntegral(alpha, x, y, theta); 
 }
 
+
+TH1* Collision::SampleJets(Int_t n=10, Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+
+    TH1F *h = new TH1F("Jets", "Sampled Jets", 100, 0, 50);
+    for (int i = 0; i < n; i++) {
+        h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax));
+    }
+    return h;
+}

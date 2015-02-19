@@ -82,8 +82,9 @@ class Collision {
         TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
-        Double_t    SampleJet(Double_t alpha);
+        Double_t    SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
 
+        TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
 };
 
         
