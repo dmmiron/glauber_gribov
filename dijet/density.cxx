@@ -1,4 +1,6 @@
 #include "density.h"
+#include <time.h>
+#include <TH1.h>
 
 using namespace std;
 
@@ -27,7 +29,7 @@ void Nucleus::Update() {
     fDensity->SetParameters(1, fR0, fMu);
 
     //Normalize woods-saxon so that integral over all space gives total number of nucleons
-    temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, INFTY);
+    TF1* temp = new TF1("temp", "fDensity*x*x*TMath::Pi()*4", 0, INFTY);
     Double_t normalization = temp->Integral(0, 100);
     //Will eventually keep track of # of nucleons instead of hard code
     fRho0 = 208.0/normalization;
@@ -59,7 +61,7 @@ Collision::Collision(Double_t iR0, Double_t iMu, Double_t iB) {
     fNucleusA = new Nucleus(iR0, iMu);
     fNucleusB = new Nucleus(iR0, iMu);
     fB = iB;
-    fsigNN = CalcSigNN();
+    fSigNN = CalcSigNN();
     Update();
 }
 
@@ -67,7 +69,7 @@ Collision::Collision(Nucleus* iNucleusA, Nucleus* iNucleusB, Double_t iB) {
     fNucleusA = iNucleusA;
     fNucleusB = iNucleusB;
     fB = iB;
-    fsigNN = CalcSigNN();
+    fSigNN = CalcSigNN();
     Update();
 }
 
@@ -166,8 +168,12 @@ TF1* Collision::JetOfTheta(Double_t alpha=1, Double_t x0=0, Double_t y0=0) {
 }
 
 Double_t Collision::JetIntegral(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+    //clock_t t;
     TF1* JetTheta = JetOfTheta(alpha, x0, y0);
-    return JetTheta->Eval(theta);
+    //t = clock();
+    Double_t out = JetTheta->Eval(theta);
+    //cout << "testing JetOFTheta: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    return out;
 }
 
 Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100) {
@@ -195,23 +201,96 @@ TF2* Collision::CalcRhoJet() {
     return rhoJet;
 }
 
-Double_t Collision::SampleJet(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    //clock_t t;
+    //t = clock();
     Double_t x;
     Double_t y;
-    fRhoJet->SetRange(xmin,ymin, xmax, ymax);
+    //cout << "SetRange: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     fRhoJet->GetRandom2(x, y);
+    //cout << fRhoJet->GetNpx() << "Npx " << fRhoJet->GetNpy() << "Npy " << endl;
+    //cout << "GetRandom2: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     TF1* uniform = new TF1("uniform", "1", 0, 360);
+    //cout << "uniform: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     //ask about how we should generate this value since it's just uniform (do we want seed transparency?)
     Double_t theta = uniform->GetRandom();
-    return JetIntegral(alpha, x, y, theta); 
+    //for testing
+    //theta = 45.0;
+    //cout << "theta: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    Double_t out = JetIntegral(alpha, x, y, theta);
+    //cout << "timing SampleJet Inside func: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    return make_pair(out, theta);
 }
 
 
-TH1* Collision::SampleJets(Int_t n=10, Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
 
-    TH1F *h = new TH1F("Jets", "Sampled Jets", 100, 0, 50);
+    //clock_t start;
+    //clock_t last; 
+    //start = clock();
+    //last = start;
+    //cout << "timing..." << endl;
+    TH1F* h = new TH1F("Jets", "Sampled Jets", 100, 0, 50);
+    fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     for (int i = 0; i < n; i++) {
-        h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax));
+        h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax).first);
+    //    cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
+    //    last = clock();
+    //    cout << ((float)(clock()-start))/CLOCKS_PER_SEC << " total time so far" << endl;
     }
     return h;
 }
+
+
+
+TH2F* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    //x value stores E, y value stores theta
+    TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 90, 0, 360);
+    fRhoJet->SetRange(xmin,ymin, xmax, ymax);
+    pair<Double_t, Double_t> result;
+    for (int i = 0; i < n; i++) {
+        result = SampleJet(alpha, xmin, ymin, xmax, ymax);
+        h->Fill(result.first, result.second);
+    } 
+    return h;
+}
+
+TH1* Collision::Unquenched(Double_t minPt = 20.0) {
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 10.0*minPt);
+    Pt_dist->SetParameter(0, minPt);
+    TH1* Pt_hist = Pt_dist->GetHistogram();
+    return Pt_hist;
+}
+
+Double_t Collision::GetNormalizationDeltaE(Double_t normalization=15.0, Double_t alpha=1.0) {
+    TH1* sample = SampleJets(1000, alpha);
+    Double_t ave = sample->GetMean();
+    return normalization/ave; 
+}
+
+TH1* Collision::DifferenceSpectrum(Int_t n = 1000) {
+    TH1* h = new TH1F("DifferenceSpectrum", "Difference", 100, 0, 100);
+    Double_t difference;
+    Double_t normalization = GetNormalizationDeltaE();
+    TH1* unquenched = Unquenched();
+    Int_t count = 0;
+    while (count < n) {
+        difference = unquenched->GetRandom()-(SampleJet().first)*normalization;
+        if (difference > 0) {
+            h->Fill(difference);
+            count++;
+        }
+    }
+    return h;
+}
+
+TH1* Collision::SampleUnquenched(Int_t n = 1000){
+    TH1* h = new TH1F("Unquenched", "Unquenched", 100, 0, 100);
+    TH1* unquenched = Unquenched();
+    for (Int_t i = 0; i < n; i++) {
+        h->Fill(unquenched->GetRandom());
+    }
+    return h;
+}
+    
+

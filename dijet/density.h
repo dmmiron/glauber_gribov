@@ -7,9 +7,13 @@ class Collision;
 #include <TMath.h>
 #include <TF1.h>
 #include <TF2.h>
+#include <TH1.h>
+#include <TH2.h>
 #include <TFile.h>
 #include <TString.h>
 #include <limits>
+#include <cstdlib>
+#include <utility>
 
 const Double_t INFTY = TMath::Infinity();
 const Double_t EPSILON = pow(10, -7);
@@ -64,6 +68,7 @@ class Collision {
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
         Double_t    JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        Double_t    GetNormalizationDeltaE(Double_t normalization, Double_t alpha);
 
     public:
         Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
@@ -82,9 +87,13 @@ class Collision {
         TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
-        Double_t    SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
 
         TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
+        TH2F*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
+        pair<Double_t, Double_t> SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+        TH1*        Unquenched(Double_t minPt);
+        TH1*        DifferenceSpectrum(Int_t n); 
+        TH1*        SampleUnquenched(Int_t n);  
 };
 
         
