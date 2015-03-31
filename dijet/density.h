@@ -92,8 +92,11 @@ class Collision {
         TH2F*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
         pair<Double_t, Double_t> SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
         TH1*        Unquenched(Double_t minPt);
-        TH1*        DifferenceSpectrum(Int_t n); 
+        TF1*        UnquenchedTF(Double_t minPt);
+        TH1*        DifferenceSpectrum(Int_t n, TH1* jets); 
         TH1*        SampleUnquenched(Int_t n);  
+        TH1*        SpectraRatio(Int_t n);
+        TH1*        SampleUnquenchedSplit(Int_t n);
 };
 
         

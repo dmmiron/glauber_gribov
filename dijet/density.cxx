@@ -234,9 +234,9 @@ TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Do
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     for (int i = 0; i < n; i++) {
         h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax).first);
-    //    cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
-    //    last = clock();
-    //    cout << ((float)(clock()-start))/CLOCKS_PER_SEC << " total time so far" << endl;
+        //cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
+        //last = clock();
+        //cout << ((float)(clock()-start))/CLOCKS_PER_SEC << " total time so far" << endl;
     }
     return h;
 }
@@ -262,25 +262,69 @@ TH1* Collision::Unquenched(Double_t minPt = 20.0) {
     return Pt_hist;
 }
 
+TF1* Collision::UnquenchedTF(Double_t minPt = 20.0) {
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 10.0*minPt);
+    Pt_dist->SetParameter(0, minPt);
+    return Pt_dist;
+};
+
 Double_t Collision::GetNormalizationDeltaE(Double_t normalization=15.0, Double_t alpha=1.0) {
     TH1* sample = SampleJets(1000, alpha);
     Double_t ave = sample->GetMean();
     return normalization/ave; 
 }
 
-TH1* Collision::DifferenceSpectrum(Int_t n = 1000) {
+TH1* Collision::DifferenceSpectrum(Int_t n = 1000, TH1* jets=0) {
+
+    //n is number of samples per SECTION
+    /*
+    clock_t start;
+    clock_t last;
+    start = clock();
+    last = start; 
+    */
     TH1* h = new TH1F("DifferenceSpectrum", "Difference", 100, 0, 100);
     Double_t difference;
     Double_t normalization = GetNormalizationDeltaE();
     TH1* unquenched = Unquenched();
+    TF1* unquenchedTF = UnquenchedTF();
     Int_t count = 0;
+    //fRhoJet->SetRange(-10, -10, 10, 10);
     while (count < n) {
-        difference = unquenched->GetRandom()-(SampleJet().first)*normalization;
+        if (jets != 0) {
+            difference = unquenchedTF->GetRandom(20.0, 40.0)-(jets->GetRandom())*normalization;
+        }
+        else{
+        difference = unquenchedTF->GetRandom(20.0, 40.0)-(SampleJet().first)*normalization;
+        }
         if (difference > 0) {
             h->Fill(difference);
             count++;
         }
+        /*
+        if (count % 100 ==0) {
+            cout << "total time so far: " << ((float)(clock()-start))/CLOCKS_PER_SEC << endl;
+            cout << count << endl;
+        }
+        */
     }
+    count = 0;
+    TH1* temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", 100, 0, 100);
+    while (count < n) {
+        if (jets != 0) {
+            difference = unquenchedTF->GetRandom(40.0, 80.0)-(jets->GetRandom())*normalization;
+        }
+        else{
+            difference = unquenchedTF->GetRandom(40.0, 80.0)-(SampleJet().first)*normalization;
+        }
+        if (difference > 0) {
+            temp->Fill(difference);
+            count++;
+        }
+    }
+    Double_t scale = 1/32.0;
+    //temp->Draw();
+    h->Add(temp, scale);
     return h;
 }
 
@@ -292,5 +336,42 @@ TH1* Collision::SampleUnquenched(Int_t n = 1000){
     }
     return h;
 }
-    
+
+TH1* Collision::SampleUnquenchedSplit(Int_t n = 1000) {
+    TH1* h = new TH1F("Unquenched", "Unquenched", 100, 0, 100);
+    TH1* temp = new TH1F("temp", "temp", 100, 0, 100);
+    TF1* unquenchedTF = UnquenchedTF();
+    for (Int_t i = 0; i < n; i++) {
+        h->Fill(unquenchedTF->GetRandom(20.0, 40.0));
+    }
+    for (Int_t i = 0; i < n; i++) {
+        temp->Fill(unquenchedTF->GetRandom(40.0, 80.0));
+    }
+    Double_t scale = 1/32.0;
+    h->Add(temp, scale);
+    return h;
+}
+        
+TH1* Collision::SpectraRatio(Int_t n = 1000) {
+    TH1* unquenched = SampleUnquenched(n);
+    TH1* difference = DifferenceSpectrum(n);
+    char name[50];
+    snprintf(name, 50, "quot_%.2f", fB);
+    TH1* quot = new TH1F(name, name, 100, 0, 100);
+    quot->Divide(difference, unquenched);
+    return quot;
+}
+
+void MakeSpectra(TString outname, Int_t n=1000, Double_t start_b=0, Double_t end_b=10, Double_t step=2) {
+    Collision *coll;
+    Double_t b = start_b;
+    TH1* ratio;
+    while (b < end_b) {
+        coll = new Collision(6.62, .546, b);
+        ratio = coll->SpectraRatio(n);
+        ratio->Write(outname);
+        b += step;
+    }
+}
+        
 
