@@ -264,6 +264,7 @@ TH1* Collision::Unquenched(Double_t minPt = 20.0) {
 
 TF1* Collision::UnquenchedTF(Double_t minPt = 20.0) {
     TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 100.0*minPt);
+    Pt_dist->SetNpx(10000);
     Pt_dist->SetParameter(0, minPt);
     return Pt_dist;
 };
@@ -331,12 +332,12 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n = 1000, Double_t min=20.0, Double_
     Double_t scale;
     while (start < max) {
         scale = 1.0/pow(start/min, 4);
-        cout << start << " " << start*2.0 << endl;
+        //cout << start << " " << start*2.0 << endl;
         for (Int_t i = 0; i < n; i++) {
             temp->Fill(unquenchedTF->GetRandom(start, start*2.0));
         }
-        cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
-        cout << "scale: " << scale << endl;
+        //cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
+        //cout << "scale: " << scale << endl;
         start = start*2.0;
         h->Add(temp, scale);
     }
