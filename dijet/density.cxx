@@ -263,7 +263,7 @@ TH1* Collision::Unquenched(Double_t minPt = 20.0) {
 }
 
 TF1* Collision::UnquenchedTF(Double_t minPt = 20.0) {
-    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 10.0*minPt);
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 100.0*minPt);
     Pt_dist->SetParameter(0, minPt);
     return Pt_dist;
 };
@@ -274,8 +274,7 @@ Double_t Collision::GetNormalizationDeltaE(Double_t normalization=15.0, Double_t
     return normalization/ave; 
 }
 
-TH1* Collision::DifferenceSpectrum(Int_t n = 1000, TH1* jets=0) {
-
+TH1* Collision::DifferenceSpectrum(Int_t n = 1000, Double_t minPt=20.0, Double_t maxPt = 320.0, TH1* jets=0) {
     //n is number of samples per SECTION
     /*
     clock_t start;
@@ -283,48 +282,35 @@ TH1* Collision::DifferenceSpectrum(Int_t n = 1000, TH1* jets=0) {
     start = clock();
     last = start; 
     */
-    TH1* h = new TH1F("DifferenceSpectrum", "Difference", 100, 0, 100);
+    TH1* h = new TH1F("DifferenceSpectrum", "Difference", maxPt, 0, maxPt);
     Double_t difference;
     Double_t normalization = GetNormalizationDeltaE();
     TH1* unquenched = Unquenched();
     TF1* unquenchedTF = UnquenchedTF();
+    TH1* temp;  
+    Double_t scale;
     Int_t count = 0;
-    //fRhoJet->SetRange(-10, -10, 10, 10);
-    while (count < n) {
-        if (jets != 0) {
-            difference = unquenchedTF->GetRandom(20.0, 40.0)-(jets->GetRandom())*normalization;
+    Double_t startPt = minPt;
+    
+    while (startPt < maxPt) {
+        temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
+        scale = 1.0/pow(startPt/minPt, 4);
+        while (count < n) {
+            if (jets!=0) {
+                difference = unquenchedTF->GetRandom(startPt, 2.0*startPt)-(jets->GetRandom())*normalization;
+            }
+            else {
+                difference = unquenchedTF->GetRandom(startPt, 2.0*startPt)-(SampleJet().first)*normalization;
+            }
+            if (difference>0) {
+                temp->Fill(difference);
+                count++;
+            }
         }
-        else{
-        difference = unquenchedTF->GetRandom(20.0, 40.0)-(SampleJet().first)*normalization;
-        }
-        if (difference > 0) {
-            h->Fill(difference);
-            count++;
-        }
-        /*
-        if (count % 100 ==0) {
-            cout << "total time so far: " << ((float)(clock()-start))/CLOCKS_PER_SEC << endl;
-            cout << count << endl;
-        }
-        */
+        count = 0;
+        h->Add(temp, scale);
+        startPt = startPt*2.0;
     }
-    count = 0;
-    TH1* temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", 100, 0, 100);
-    while (count < n) {
-        if (jets != 0) {
-            difference = unquenchedTF->GetRandom(40.0, 80.0)-(jets->GetRandom())*normalization;
-        }
-        else{
-            difference = unquenchedTF->GetRandom(40.0, 80.0)-(SampleJet().first)*normalization;
-        }
-        if (difference > 0) {
-            temp->Fill(difference);
-            count++;
-        }
-    }
-    Double_t scale = 1/32.0;
-    //temp->Draw();
-    h->Add(temp, scale);
     return h;
 }
 
@@ -337,18 +323,23 @@ TH1* Collision::SampleUnquenched(Int_t n = 1000){
     return h;
 }
 
-TH1* Collision::SampleUnquenchedSplit(Int_t n = 1000) {
-    TH1* h = new TH1F("Unquenched", "Unquenched", 100, 0, 100);
-    TH1* temp = new TH1F("temp", "temp", 100, 0, 100);
+TH1* Collision::SampleUnquenchedSplit(Int_t n = 1000, Double_t min=20.0, Double_t max=320.0) {
+    TH1* h = new TH1F("Unquenched", "Unquenched", max, 0, max);
+    TH1* temp = new TH1F("temp", "temp", max, 0, max);
     TF1* unquenchedTF = UnquenchedTF();
-    for (Int_t i = 0; i < n; i++) {
-        h->Fill(unquenchedTF->GetRandom(20.0, 40.0));
+    Double_t start = min;
+    Double_t scale;
+    while (start < max) {
+        scale = 1.0/pow(start/min, 4);
+        cout << start << " " << start*2.0 << endl;
+        for (Int_t i = 0; i < n; i++) {
+            temp->Fill(unquenchedTF->GetRandom(start, start*2.0));
+        }
+        cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
+        cout << "scale: " << scale << endl;
+        start = start*2.0;
+        h->Add(temp, scale);
     }
-    for (Int_t i = 0; i < n; i++) {
-        temp->Fill(unquenchedTF->GetRandom(40.0, 80.0));
-    }
-    Double_t scale = 1/32.0;
-    h->Add(temp, scale);
     return h;
 }
         
