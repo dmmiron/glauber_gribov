@@ -298,8 +298,8 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
     normalization = normalization/jets->GetMean();
     
     //CLEAN UP THIS LOOP
+    temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
     while (startPt < maxPt) {
-        temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
         scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
         while (count < n_samples) {
             if (jets!=0) {
@@ -318,6 +318,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
         temp->Reset();
         startPt = startPt*2.0;
     }
+    delete temp;
     return h;
 }
 
@@ -350,6 +351,8 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.
         h->Add(temp, scale);
         temp->Reset();
     }
+    delete temp;
+    delete unquenchedTF;
     return h;
 }
         
@@ -360,6 +363,8 @@ TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Doubl
     snprintf(name, 100, "quot_b=%.2f_DE=%.2f", fB, normalization);
     TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
     quot->Divide(difference, unquenched);
+    delete unquenched;
+    delete difference;
     return quot;
 }
 
@@ -390,4 +395,5 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
         b += step_b;
     }
     f->Close();
+    delete ratio;
 }
