@@ -255,27 +255,28 @@ TH2F* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-
     return h;
 }
 
-TH1* Collision::Unquenched(Double_t minPt = 20.0) {
-    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 10.0*minPt);
-    Pt_dist->SetParameter(0, minPt);
+TH1* Collision::Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0) {
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 10.0*minPt);
+    Pt_dist->SetParameters(minPt, n, beta);
     TH1* Pt_hist = Pt_dist->GetHistogram();
     return Pt_hist;
 }
 
-TF1* Collision::UnquenchedTF(Double_t minPt = 20.0) {
-    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^5", minPt, 100.0*minPt);
+TF1* Collision::UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0) {
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 100.0*minPt);
     Pt_dist->SetNpx(10000);
-    Pt_dist->SetParameter(0, minPt);
+    Pt_dist->SetParameters(minPt, n, beta);
     return Pt_dist;
 };
 
+//SHOULD BE REMOVED
 Double_t Collision::GetNormalizationDeltaE(Double_t normalization=15.0, Double_t alpha=1.0) {
     TH1* sample = SampleJets(1000, alpha);
     Double_t ave = sample->GetMean();
     return normalization/ave; 
 }
 
-TH1* Collision::DifferenceSpectrum(Int_t n = 1000, Double_t minPt=20.0, Double_t maxPt = 320.0, TH1* jets=0) {
+TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t maxPt = 320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0) {
     //n is number of samples per SECTION
     /*
     clock_t start;
@@ -285,18 +286,22 @@ TH1* Collision::DifferenceSpectrum(Int_t n = 1000, Double_t minPt=20.0, Double_t
     */
     TH1* h = new TH1F("DifferenceSpectrum", "Difference", maxPt, 0, maxPt);
     Double_t difference;
-    Double_t normalization = GetNormalizationDeltaE();
-    TH1* unquenched = Unquenched();
-    TF1* unquenchedTF = UnquenchedTF();
+    TH1* unquenched = Unquenched(minPt, n, beta);
+    TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
     TH1* temp;  
     Double_t scale;
     Int_t count = 0;
     Double_t startPt = minPt;
+    Double_t exp;
+    //renormalize deltaE distribution
+    //note fixing this from calculating the mean from a new sample every time should be a major speed increase
+    normalization = normalization/jets->GetMean();
     
+    //CLEAN UP THIS LOOP
     while (startPt < maxPt) {
         temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
-        scale = 1.0/pow(startPt/minPt, 4);
-        while (count < n) {
+        scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
+        while (count < n_samples) {
             if (jets!=0) {
                 difference = unquenchedTF->GetRandom(startPt, 2.0*startPt)-(jets->GetRandom())*normalization;
             }
@@ -310,60 +315,79 @@ TH1* Collision::DifferenceSpectrum(Int_t n = 1000, Double_t minPt=20.0, Double_t
         }
         count = 0;
         h->Add(temp, scale);
+        temp->Reset();
         startPt = startPt*2.0;
     }
     return h;
 }
 
-TH1* Collision::SampleUnquenched(Int_t n = 1000){
+TH1* Collision::SampleUnquenched(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0){
     TH1* h = new TH1F("Unquenched", "Unquenched", 100, 0, 100);
-    TH1* unquenched = Unquenched();
-    for (Int_t i = 0; i < n; i++) {
+    TH1* unquenched = Unquenched(minPt, n, beta);
+    for (Int_t i = 0; i < n_samples; i++) {
         h->Fill(unquenched->GetRandom());
     }
     return h;
 }
 
-TH1* Collision::SampleUnquenchedSplit(Int_t n = 1000, Double_t min=20.0, Double_t max=320.0) {
-    TH1* h = new TH1F("Unquenched", "Unquenched", max, 0, max);
-    TH1* temp = new TH1F("temp", "temp", max, 0, max);
-    TF1* unquenchedTF = UnquenchedTF();
-    Double_t start = min;
+TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0) {
+    TH1* h = new TH1F("Unquenched", "Unquenched", maxPt, 0, maxPt);
+    TH1* temp = new TH1F("temp", "temp", maxPt, 0, maxPt);
+    TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
+    Double_t start = minPt;
     Double_t scale;
-    while (start < max) {
-        scale = 1.0/pow(start/min, 4);
+    while (start < maxPt) {
+        scale = unquenchedTF->Integral(start,2*start)/unquenchedTF->Integral(minPt, 2*minPt);
+        //cout << scale << endl;
+        
         //cout << start << " " << start*2.0 << endl;
-        for (Int_t i = 0; i < n; i++) {
+        for (Int_t i = 0; i < n_samples; i++) {
             temp->Fill(unquenchedTF->GetRandom(start, start*2.0));
         }
         //cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
         //cout << "scale: " << scale << endl;
         start = start*2.0;
         h->Add(temp, scale);
+        temp->Reset();
     }
     return h;
 }
         
-TH1* Collision::SpectraRatio(Int_t n = 1000) {
-    TH1* unquenched = SampleUnquenched(n);
-    TH1* difference = DifferenceSpectrum(n);
-    char name[50];
-    snprintf(name, 50, "quot_%.2f", fB);
-    TH1* quot = new TH1F(name, name, 100, 0, 100);
+TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0) {
+    TH1* unquenched = SampleUnquenchedSplit(n_samples, minPt, maxPt, n, beta);
+    TH1* difference = DifferenceSpectrum(n_samples, minPt, maxPt, n, beta, jets, normalization);
+    char name[100];
+    snprintf(name, 100, "quot_b=%.2f_DE=%.2f", fB, normalization);
+    TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
     quot->Divide(difference, unquenched);
     return quot;
 }
 
-void MakeSpectra(TString outname, Int_t n=1000, Double_t start_b=0, Double_t end_b=10, Double_t step=2) {
+void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t start_b=4.0, Double_t end_b=6.5, Double_t step_b=0.5, Double_t minPt=20.0, Double_t maxPt = 320.0, Double_t n_quark=5.0, Double_t beta_quark=0.0, Double_t n_gluon=5.0, Double_t beta_gluon=0.0, Double_t quarkFrac=1.0) {
+    TFile* f = TFile::Open(outfile, "recreate");
     Collision *coll;
     Double_t b = start_b;
-    TH1* ratio;
+    Double_t deltaE = startDeltaE;
+    Double_t gluonFrac = 1.0-quarkFrac;
+    TH1* q_ratio;
+    TH1* g_ratio;
+    TH1* ratio = new TH1F("ratio", "ratio", maxPt, 0, maxPt);
     while (b < end_b) {
         coll = new Collision(6.62, .546, b);
-        ratio = coll->SpectraRatio(n);
-        ratio->Write(outname);
-        b += step;
+        while (deltaE < endDeltaE) {
+            q_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
+            if (quarkFrac != 1.0) {
+                g_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
+                ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
+            }
+            else {
+                ratio = q_ratio;
+            }
+            ratio->Write(outfile);
+            deltaE += stepE;
+        }
+        deltaE = startDeltaE;
+        b += step_b;
     }
+    f->Close();
 }
-        
-

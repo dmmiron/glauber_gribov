@@ -17,6 +17,7 @@ class Collision;
 
 const Double_t INFTY = TMath::Infinity();
 const Double_t EPSILON = pow(10, -7);
+const Double_t GLUON_RATIO = 9.0/4.0; //ratio of gluon energy suppression to quark energy suppression
 
 class Nucleus 
 {
@@ -91,12 +92,12 @@ class Collision {
         TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
         TH2F*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
         pair<Double_t, Double_t> SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
-        TH1*        Unquenched(Double_t minPt);
-        TF1*        UnquenchedTF(Double_t minPt);
-        TH1*        DifferenceSpectrum(Int_t n, Double_t minPt, Double_t maxPt, TH1* jets); 
-        TH1*        SampleUnquenched(Int_t n);  
-        TH1*        SpectraRatio(Int_t n);
-        TH1*        SampleUnquenchedSplit(Int_t n, Double_t min, Double_t max);
+        TH1*        Unquenched(Double_t minPt, Double_t n, Double_t beta);
+        TF1*        UnquenchedTF(Double_t minPt, Double_t n, Double_t beta);
+        TH1*        DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization); 
+        TH1*        SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Double_t beta);  
+        TH1*        SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization);
+        TH1*        SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta);
 };
 
         
