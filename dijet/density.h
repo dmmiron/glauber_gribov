@@ -90,8 +90,11 @@ class Collision {
         TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
 
         TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
-        TH2F*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
+        TH2*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
+        TH2*       SampleJetsPaired(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
         pair<Double_t, Double_t> SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+        pair<Double_t, Double_t> SampleJetPair(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+
         TH1*        Unquenched(Double_t minPt, Double_t n, Double_t beta);
         TF1*        UnquenchedTF(Double_t minPt, Double_t n, Double_t beta);
         TH1*        DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization); 

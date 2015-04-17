@@ -184,8 +184,6 @@ Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Dou
     return density->Integral(xmin, xmax, ymin, ymax, EPSILON);
 }
     
-
-
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100) {
     Double_t RMSx = CalcMoment2(f, 2, 0, xmin, xmax, ymin, ymax);
     Double_t RMSy = CalcMoment2(f, 0, 2, xmin, xmax, ymin, ymax);
@@ -222,9 +220,20 @@ pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha=1, Double_t xmin=-1
     return make_pair(out, theta);
 }
 
+pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    Double_t x;
+    Double_t y;
+    fRhoJet->GetRandom2(x, y);
+    //sample jets opposite directions
+    TF1* uniform = new TF1("uniform", "1", 0, 360);
+    Double_t theta = uniform->GetRandom();
+    Double_t jet1 = JetIntegral(alpha, x, y, theta);
+    Double_t jet2 = JetIntegral(alpha, x, y, theta+180);
+    return make_pair(jet1, jet2);
+}
+
 
 TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
-
     //clock_t start;
     //clock_t last; 
     //start = clock();
@@ -241,9 +250,19 @@ TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Do
     return h;
 }
 
+TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    TH2F* h = new TH2F("JetPairs", "Sampled Jets Pairs", 100, 0, 50, 100, 0, 50);
+    fRhoJet->SetRange(xmin,ymin, xmax, ymax);
+    pair<Double_t, Double_t> jets; 
+    for (int i = 0; i < n; i++) {
+        jets = SampleJetPair(alpha, xmin, ymin, xmax, ymax);
+        h->Fill(jets.first, jets.second);
+    }
+    return h;
+}
 
 
-TH2F* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+TH2* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
     //x value stores E, y value stores theta
     TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 90, 0, 360);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
@@ -383,17 +402,21 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
             q_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
             if (quarkFrac != 1.0) {
                 g_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
+                g_ratio->SetName("gluons");
+                g_ratio->Write(outfile);
                 ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
             }
             else {
                 ratio = q_ratio;
             }
+            ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
+            q_ratio->SetName("quarks");
             ratio->Write(outfile);
+            q_ratio->Write(outfile);
             deltaE += stepE;
         }
         deltaE = startDeltaE;
         b += step_b;
     }
     f->Close();
-    delete ratio;
 }
