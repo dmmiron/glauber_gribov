@@ -420,3 +420,73 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
     }
     f->Close();
 }
+
+TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
+    Double_t jet1;
+    Double_t jet2;
+    TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
+
+    Double_t A_j;
+    for (int i = 0; i < n; i++) {
+
+        jets->GetRandom2(jet1, jet2);
+        if (jet1 <= jet2) {
+            A_j = (jet2-jet1)/(jet2+jet1);
+        }
+        else {
+            A_j = (jet1-jet2)/(jet1+jet2);
+        }
+        subleading->Fill(A_j);
+    }
+    return subleading;
+}
+
+TH1* SampleAsymmetry(Int_t n_samples=10000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0) {
+    Double_t jetLoss1;
+    Double_t jetLoss2;
+    Double_t jet1;
+    Double_t jet2;
+    TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
+    
+    Collision* coll = new Collision(6.62, .546, 5);
+    TF1* unquenchedTF = coll->UnquenchedTF(minPt);
+    TH1* temp;  
+    Double_t scale;
+    Int_t count = 0;
+    Double_t startPt = minPt;
+    Double_t exp;
+    
+    Double_t unquenchedJet;
+    Double_t tempVal;
+    Double_t A_j;
+    
+    temp = new TH1F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1);
+    while (startPt < maxPt) {
+        scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
+        while (count < n_samples) {
+            jets->GetRandom2(jetLoss1, jetLoss2);
+            if (jetLoss1 < jetLoss2) {
+                tempVal = jetLoss1;
+                jetLoss1 = jetLoss2;
+                jetLoss2 = tempVal;
+            }
+            unquenchedJet = unquenchedTF->GetRandom(startPt, 2.0*startPt); 
+            if (unquenchedJet > jetLoss1) {
+                jet1 = unquenchedJet-jetLoss1;
+                jet2 = unquenchedJet-jetLoss2;
+                //JetLoss1 > JetLoss2 => jet1<jet2
+                //A_j = (jet2-jet1)/(jet2+jet1);
+                A_j = jet1/jet2;
+                temp->Fill(A_j);
+                count++;
+            }
+        }
+        count = 0;
+        subleading->Add(temp, scale);
+        temp->Reset();
+        startPt = startPt*2.0;
+    }
+    delete temp;
+    return subleading;
+}
+
