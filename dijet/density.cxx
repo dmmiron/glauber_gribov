@@ -441,12 +441,12 @@ TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
     return subleading;
 }
 
-TH1* SampleAsymmetry(Int_t n_samples=10000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0) {
+TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0, Bool_t x_j = true) {
     Double_t jetLoss1;
     Double_t jetLoss2;
     Double_t jet1;
     Double_t jet2;
-    TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
+    TH2* subleading = new TH2F("Subleading ratio", "Subleading ratio", 100, 0, 1, maxPt, 0, maxPt);
     
     Collision* coll = new Collision(6.62, .546, 5);
     TF1* unquenchedTF = coll->UnquenchedTF(minPt);
@@ -454,30 +454,36 @@ TH1* SampleAsymmetry(Int_t n_samples=10000, TH2* jets = 0, Double_t minPt=20.0, 
     Double_t scale;
     Int_t count = 0;
     Double_t startPt = minPt;
-    Double_t exp;
-    
     Double_t unquenchedJet;
-    Double_t tempVal;
-    Double_t A_j;
+    Double_t asymmetry;
     
-    temp = new TH1F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1);
+    temp = new TH2F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1, maxPt, 0, maxPt);
     while (startPt < maxPt) {
         scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
         while (count < n_samples) {
             jets->GetRandom2(jetLoss1, jetLoss2);
-            if (jetLoss1 < jetLoss2) {
-                tempVal = jetLoss1;
-                jetLoss1 = jetLoss2;
-                jetLoss2 = tempVal;
-            }
             unquenchedJet = unquenchedTF->GetRandom(startPt, 2.0*startPt); 
-            if (unquenchedJet > jetLoss1) {
-                jet1 = unquenchedJet-jetLoss1;
-                jet2 = unquenchedJet-jetLoss2;
-                //JetLoss1 > JetLoss2 => jet1<jet2
-                //A_j = (jet2-jet1)/(jet2+jet1);
-                A_j = jet1/jet2;
-                temp->Fill(A_j);
+            jet1 = unquenchedJet-jetLoss1;
+            jet2 = unquenchedJet-jetLoss2;
+            if ((jet1 >= 0) && (jet2 >= 0)) {
+                if (jet1 > jet2) {
+                    if (x_j) {
+                        asymmetry = (jet1-jet2)/(jet1+jet2);
+                    }
+                    else {
+                        asymmetry = jet2/jet1;
+                    }
+                    temp->Fill(asymmetry, jet1);
+                }
+                else {
+                    if (x_j) {
+                        asymmetry = (jet2-jet1)/(jet1+jet2);
+                    }
+                    else {
+                        asymmetry = jet1/jet2;
+                    }
+                    temp->Fill(asymmetry, jet2);
+                }
                 count++;
             }
         }
