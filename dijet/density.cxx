@@ -102,7 +102,8 @@ Double_t Collision::CalcSB(Double_t x, Double_t y) {
     return TMath::Sqrt(sx*sx+sy*sy);
 }
 
-TF1* Collision::CalcNuA() { TF1* thickness = fNucleusA->GetThicknessFunc();
+TF1* Collision::CalcNuA() { 
+    TF1* thickness = fNucleusA->GetThicknessFunc();
     MultFunc *multFunc = new MultFunc(thickness);
     TF1* NuA = new TF1("NuA", multFunc, 0, INFTY, 1, "multFunc");
     NuA->SetParameter(0, fSigNN);
@@ -243,6 +244,9 @@ TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Do
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     for (int i = 0; i < n; i++) {
         h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax).first);
+        if (i % 1000 == 0) {
+            cout << i << " jets sampled" << endl;
+        }
         //cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
         //last = clock();
         //cout << ((float)(clock()-start))/CLOCKS_PER_SEC << " total time so far" << endl;
@@ -273,6 +277,18 @@ TH2* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-1
     } 
     return h;
 }
+
+void MakeAndSaveJets(Int_t n = 20000, Double_t alpha=0, Double_t b=0, const char* dir_path="sampled", Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    TString name = TString::Format("%s/SampledJets_alpha%.2f_%uk_b%.1f.root", dir_path, alpha, n / 1000, b); 
+    cout << name << endl;
+    TFile *f = TFile::Open(name, "recreate");
+    Collision coll = Collision(6.62, .546, b);
+    TH1* jets = coll.SampleJets(n, alpha, xmin, ymin, xmax, ymax);
+    jets->Write(name); 
+    delete jets;
+    f->Close();
+}
+
 
 TH1* Collision::Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0) {
     TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 10.0*minPt);
@@ -441,7 +457,7 @@ TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
     return subleading;
 }
 
-TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0, Bool_t x_j = true) {
+TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0, Int_t pair_type=QUARK_QUARK, Bool_t x_j = true) {
     Double_t jetLoss1;
     Double_t jetLoss2;
     Double_t jet1;
@@ -463,24 +479,31 @@ TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0,
         while (count < n_samples) {
             jets->GetRandom2(jetLoss1, jetLoss2);
             unquenchedJet = unquenchedTF->GetRandom(startPt, 2.0*startPt); 
+            if (pair_type == QUARK_GLUON) {
+                jetLoss1 = GLUON_RATIO*jetLoss1;
+            }
+            else if (pair_type == GLUON_GLUON) {
+                jetLoss1 = GLUON_RATIO*jetLoss1;
+                jetLoss2 = GLUON_RATIO*jetLoss2;
+            }
             jet1 = unquenchedJet-jetLoss1;
             jet2 = unquenchedJet-jetLoss2;
             if ((jet1 >= 0) && (jet2 >= 0)) {
                 if (jet1 > jet2) {
                     if (x_j) {
-                        asymmetry = (jet1-jet2)/(jet1+jet2);
+                        asymmetry = jet2/jet1;
                     }
                     else {
-                        asymmetry = jet2/jet1;
+                        asymmetry = (jet1-jet2)/(jet1+jet2);
                     }
                     temp->Fill(asymmetry, jet1);
                 }
                 else {
                     if (x_j) {
-                        asymmetry = (jet2-jet1)/(jet1+jet2);
+                        asymmetry = jet1/jet2;
                     }
                     else {
-                        asymmetry = jet1/jet2;
+                        asymmetry = (jet2-jet1)/(jet1+jet2);
                     }
                     temp->Fill(asymmetry, jet2);
                 }
@@ -494,5 +517,11 @@ TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0,
     }
     delete temp;
     return subleading;
+}
+
+Double_t CentralityBin(Double_t endFrac=.10) {
+    Double_t area = 1000*CROSS_SECTION*(endFrac);
+    Double_t b2 = area/(10*TMath::Pi()); //b squared (factor of 10 for mb to fm^2)
+    return TMath::Sqrt(b2);
 }
 
