@@ -284,8 +284,7 @@ void MakeAndSaveJets(Int_t n = 20000, Double_t alpha=0, Double_t b=0, const char
     TFile *f = TFile::Open(name, "recreate");
     Collision coll = Collision(6.62, .546, b);
     TH1* jets = coll.SampleJets(n, alpha, xmin, ymin, xmax, ymax);
-    jets->Write(name); 
-    delete jets;
+    jets->Write(); 
     f->Close();
 }
 
@@ -419,7 +418,7 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
             if (quarkFrac != 1.0) {
                 g_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
                 g_ratio->SetName("gluons");
-                g_ratio->Write(outfile);
+                g_ratio->Write();
                 ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
             }
             else {
@@ -427,8 +426,8 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
             }
             ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
             q_ratio->SetName("quarks");
-            ratio->Write(outfile);
-            q_ratio->Write(outfile);
+            ratio->Write();
+            q_ratio->Write();
             deltaE += stepE;
         }
         deltaE = startDeltaE;
@@ -436,6 +435,16 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
     }
     f->Close();
 }
+
+TH1* LoadJets(const char* filename) {
+    TFile *f = TFile::Open(filename);
+    TList *l = f->GetListOfKeys();
+    TString name = l->First()->GetName();
+    TH1* jets = (TH1*)f->Get(name);
+    f->Close();
+    return jets;
+}
+
 
 TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
     Double_t jet1;
