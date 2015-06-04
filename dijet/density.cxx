@@ -178,7 +178,7 @@ Double_t Collision::JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double
     return out;
 }
 
-Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100) {
+Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
     Moment2* intg = new Moment2(f);
     TF2* density = new TF2("density", intg, -INFTY, INFTY, -INFTY, INFTY, 2, "Moment2");
     density->SetParameters(nx, ny);
@@ -189,7 +189,7 @@ Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Dou
     return out;
 }
     
-Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100) {
+Double_t Eccentricity(TF2 *f, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
     Double_t RMSx = CalcMoment2(f, 2, 0, xmin, xmax, ymin, ymax);
     Double_t RMSy = CalcMoment2(f, 0, 2, xmin, xmax, ymin, ymax);
     return (RMSx-RMSy)/(RMSx+RMSy);
@@ -284,7 +284,7 @@ TH2* Collision::SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t
     return h;
 }
 
-void MakeAndSaveJets(Int_t n = 20000, Double_t alpha=0, Double_t b=0, const char* dir_path="sampled", Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, const char* dir_path, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TString name = TString::Format("%s/SampledJets_alpha%.2f_%uk_b%.1f.root", dir_path, alpha, n / 1000, b); 
     cout << name << endl;
     TFile *f = TFile::Open(name, "recreate");
@@ -452,7 +452,7 @@ Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
     return gCoef;
 }
 
-void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t b=0, Double_t minPt=20.0, Double_t maxPt = 640.0, Double_t n_quark=4.19, Double_t beta_quark=0.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.34) {
+void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDeltaE, Double_t endDeltaE, Double_t stepE, Double_t b, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     TFile* f = TFile::Open(outfile, "recreate");
     Collision coll = Collision(6.62, .546, b);
     Double_t deltaE = startDeltaE;
@@ -523,7 +523,7 @@ TH1* LoadJets(const char* filename) {
 }
 
 
-TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
+TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
     Double_t jet1;
     Double_t jet2;
     TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
@@ -543,7 +543,7 @@ TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0) {
     return subleading;
 }
 
-TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0, Double_t maxPt=320.0, Int_t pair_type=QUARK_QUARK, Bool_t x_j = true) {
+TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
     Double_t jetLoss1;
     Double_t jetLoss2;
     Double_t jet1;
@@ -605,7 +605,7 @@ TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets = 0, Double_t minPt=20.0,
     return subleading;
 }
 
-Double_t CentralityBin(Double_t endFrac=.10) {
+Double_t CentralityBin(Double_t endFrac) {
     Double_t area = 1000*CROSS_SECTION*(endFrac);
     Double_t b2 = area/(10*TMath::Pi()); //b squared (factor of 10 for mb to fm^2)
     return TMath::Sqrt(b2);
@@ -615,7 +615,7 @@ TH1* HistDiff(TH2* h) {
     Int_t nbinsx = h->GetNbinsX();
     Int_t nbinsy = h->GetNbinsY();
     Int_t count = 0;
-    TH1* diff = new TH1F("Difference", "Difference", 2*nbinsx, -nbinsx, nbinsx);
+    TH1* diff = new TH1F(TString::Format("Difference%s", h->GetTitle()), "Difference", 2*nbinsx, -nbinsx, nbinsx);
     for (Int_t i =0; i < nbinsx; i++) {
         for (Int_t j=0; j < nbinsy; j++) {
             count = h->GetBinContent(i, j);
