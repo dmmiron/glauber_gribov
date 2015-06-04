@@ -73,7 +73,6 @@ class Collision {
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
         Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t theta=0);
-        Double_t    GetNormalizationDeltaE(Double_t normalization, Double_t alpha);
 
     public:
         Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
@@ -93,19 +92,19 @@ class Collision {
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
         TF1*        JetOfTheta(Double_t alpha=0, Double_t x0=0, Double_t y0=0);
 
-        TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
-        TH2*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
-        TH2*       SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+        TH1*        SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=10, Double_t xmax=10, Double_t ymax=10); 
+        TH2*       SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10); 
+        TH2*       SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
         pair<Double_t, Double_t> SampleJet(Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
         pair<Double_t, Double_t> SampleJetPair(Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
 
-        TH1*        Unquenched(Double_t minPt, Double_t n, Double_t beta);
-        TF1*        UnquenchedTF(Double_t minPt, Double_t n, Double_t beta);
-        TH1*        DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization); 
-        TH1*        SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Double_t beta);  
-        TH1*        SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization);
-        TH1*        SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta);
-        TH1*        QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac);
+        TH1*        Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
+        TF1*        UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
+        TH1*        DifferenceSpectrum(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0); 
+        TH1*        SampleUnquenched(Int_t n_samples=1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);  
+        TH1*        SpectraRatio(Int_t n_samples=10000, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0);
+        TH1*        SampleUnquenchedSplit(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0);
+        TH1*        QGSpectraRatio(Int_t n_samples=10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.34);
 };
 
         

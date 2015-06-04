@@ -240,7 +240,7 @@ pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t theta
 }
 
 
-TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+TH1* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     //clock_t start;
     //clock_t last; 
     //start = clock();
@@ -260,7 +260,7 @@ TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Do
     return h;
 }
 
-TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", theta), 100, 0, 50, 100, 0, 50);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     pair<Double_t, Double_t> jets; 
@@ -272,7 +272,7 @@ TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t theta=
 }
 
 
-TH2* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+TH2* Collision::SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     //x value stores E, y value stores theta
     TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 360, 0, 360);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
@@ -295,28 +295,21 @@ void MakeAndSaveJets(Int_t n = 20000, Double_t alpha=0, Double_t b=0, const char
 }
 
 
-TH1* Collision::Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0) {
+TH1* Collision::Unquenched(Double_t minPt, Double_t n, Double_t beta) {
     TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 10.0*minPt);
     Pt_dist->SetParameters(minPt, n, beta);
     TH1* Pt_hist = Pt_dist->GetHistogram();
     return Pt_hist;
 }
 
-TF1* Collision::UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0) {
+TF1* Collision::UnquenchedTF(Double_t minPt, Double_t n, Double_t beta) {
     TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 100.0*minPt);
     Pt_dist->SetNpx(10000);
     Pt_dist->SetParameters(minPt, n, beta);
     return Pt_dist;
 };
 
-//SHOULD BE REMOVED
-Double_t Collision::GetNormalizationDeltaE(Double_t normalization=15.0, Double_t alpha=1.0) {
-    TH1* sample = SampleJets(1000, alpha);
-    Double_t ave = sample->GetMean();
-    return normalization/ave; 
-}
-
-TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t maxPt = 320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0) {
+TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization) {
     //n is number of samples per SECTION
     /*
     clock_t start;
@@ -363,7 +356,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
     return h;
 }
 
-TH1* Collision::SampleUnquenched(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0){
+TH1* Collision::SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Double_t beta){
     TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", 100, 0, 100);
     TH1* unquenched = Unquenched(minPt, n, beta);
     for (Int_t i = 0; i < n_samples; i++) {
@@ -373,7 +366,7 @@ TH1* Collision::SampleUnquenched(Int_t n_samples = 1000, Double_t minPt=20.0, Do
     return h;
 }
 
-TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0) {
+TH1* Collision::SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta) {
     TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", maxPt, 0, maxPt);
     TH1* temp = new TH1F("temp", "temp", maxPt, 0, maxPt);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
@@ -398,7 +391,7 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.
     return h;
 }
         
-TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0) {
+TH1* Collision::SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization) {
     TH1* unquenched = SampleUnquenchedSplit(n_samples, minPt, maxPt, n, beta);
     TH1* difference = DifferenceSpectrum(n_samples, minPt, maxPt, n, beta, jets, normalization);
     TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
@@ -409,7 +402,7 @@ TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Doubl
     return quot;
 }
 
-TH1* Collision::QGSpectraRatio(Int_t n_samples = 10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.34) {
+TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     TH1* unquenchedQuark = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_quark, beta_quark);
     TH1* unquenchedGluon = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_gluon, beta_gluon);
     TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, normalization);
