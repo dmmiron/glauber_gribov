@@ -143,9 +143,8 @@ TF2* Collision::CalcPPart() {
     return PPart;
 }
 
-TF1* Collision::CalcJetIntegrand(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+TF1* Collision::CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta) {
     //convert degrees to radians
-    theta = theta*TMath::Pi()/180.0;
 
     JetIntegrand *jInt = new JetIntegrand(fPPart);
     //Temporary fix limit of integration at 100
@@ -160,15 +159,17 @@ Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Doub
 }
 */
 
-TF1* Collision::JetOfTheta(Double_t alpha=1, Double_t x0=0, Double_t y0=0) {
+//THIS FUNCTION IS IN RADIANS, REST OF UI IN DEGREES
+TF1* Collision::JetOfTheta(Double_t alpha, Double_t x0, Double_t y0) {
     TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, 0);
     CalcJet* jet = new CalcJet(JetInt);
-    TF1* JetTheta = new TF1("JetTheta", jet, 0, 2*TMath::Pi(), 3, "CalcJet");
+    TF1* JetTheta = new TF1("JetTheta", jet, 0, 360, 3, "CalcJet");
+    
     JetTheta->SetParameters(alpha, x0, y0);
     return JetTheta;
 }
 
-Double_t Collision::JetIntegral(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
+Double_t Collision::JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double_t theta) {
     //clock_t t;
     TF1* JetTheta = JetOfTheta(alpha, x0, y0);
     //t = clock();
@@ -182,7 +183,10 @@ Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Dou
     TF2* density = new TF2("density", intg, -INFTY, INFTY, -INFTY, INFTY, 2, "Moment2");
     density->SetParameters(nx, ny);
     //return density->Integral(-INFTY, INFTY, -INFTY, INFTY);
-    return density->Integral(xmin, xmax, ymin, ymax, EPSILON);
+    Double_t out = density->Integral(xmin, xmax, ymin, ymax, EPSILON);
+    delete intg;
+    delete density;
+    return out;
 }
     
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100) {
@@ -200,8 +204,7 @@ TF2* Collision::CalcRhoJet() {
     return rhoJet;
 }
 
-pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
-    //clock_t t;
+pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) { //clock_t t;
     //t = clock();
     Double_t x;
     Double_t y;
@@ -217,17 +220,20 @@ pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha=1, Double_t xmin=-1
     //theta = 45.0;
     //cout << "theta: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     Double_t out = JetIntegral(alpha, x, y, theta);
-    //cout << "timing SampleJet Inside func: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    //cout << "timing SampleJet Inside func: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl; 
     return make_pair(out, theta);
 }
 
-pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha=1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+//Convention is theta outside of range [0, 360) means choose uniformly
+pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     Double_t x;
     Double_t y;
     fRhoJet->GetRandom2(x, y);
     //sample jets opposite directions
     TF1* uniform = new TF1("uniform", "1", 0, 360);
-    Double_t theta = uniform->GetRandom();
+    if (theta < 0 || theta >= 360) {
+        theta = uniform->GetRandom();
+    }
     Double_t jet1 = JetIntegral(alpha, x, y, theta);
     Double_t jet2 = JetIntegral(alpha, x, y, theta+180);
     return make_pair(jet1, jet2);
@@ -254,12 +260,12 @@ TH1* Collision::SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Do
     return h;
 }
 
-TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
-    TH2F* h = new TH2F("JetPairs", "Sampled Jets Pairs", 100, 0, 50, 100, 0, 50);
+TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
+    TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", theta), 100, 0, 50, 100, 0, 50);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     pair<Double_t, Double_t> jets; 
     for (int i = 0; i < n; i++) {
-        jets = SampleJetPair(alpha, xmin, ymin, xmax, ymax);
+        jets = SampleJetPair(alpha, theta, xmin, ymin, xmax, ymax);
         h->Fill(jets.first, jets.second);
     }
     return h;
@@ -268,7 +274,7 @@ TH2* Collision::SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t xmin=-
 
 TH2* Collision::SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10) {
     //x value stores E, y value stores theta
-    TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 90, 0, 360);
+    TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 360, 0, 360);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     pair<Double_t, Double_t> result;
     for (int i = 0; i < n; i++) {
@@ -318,7 +324,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
     start = clock();
     last = start; 
     */
-    TH1* h = new TH1F("DifferenceSpectrum", "Difference", maxPt, 0, maxPt);
+    TH1* h = new TH1F(TString::Format("DifferenceSpectrum%.2f", n), "Difference", maxPt, 0, maxPt);
     Double_t difference;
     TH1* unquenched = Unquenched(minPt, n, beta);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
@@ -329,7 +335,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
     Double_t exp;
     //renormalize deltaE distribution
     //note fixing this from calculating the mean from a new sample every time should be a major speed increase
-    normalization = normalization/jets->GetMean();
+    //normalization = normalization/jets->GetMean();
     
     //CLEAN UP THIS LOOP
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
@@ -352,21 +358,23 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples = 1000, Double_t minPt=20.0, 
         temp->Reset();
         startPt = startPt*2.0;
     }
+    delete unquenched;
     delete temp;
     return h;
 }
 
 TH1* Collision::SampleUnquenched(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0){
-    TH1* h = new TH1F("Unquenched", "Unquenched", 100, 0, 100);
+    TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", 100, 0, 100);
     TH1* unquenched = Unquenched(minPt, n, beta);
     for (Int_t i = 0; i < n_samples; i++) {
         h->Fill(unquenched->GetRandom());
     }
+    delete unquenched;
     return h;
 }
 
 TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0) {
-    TH1* h = new TH1F("Unquenched", "Unquenched", maxPt, 0, maxPt);
+    TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", maxPt, 0, maxPt);
     TH1* temp = new TH1F("temp", "temp", maxPt, 0, maxPt);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
     Double_t start = minPt;
@@ -393,8 +401,7 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples = 1000, Double_t minPt=20.
 TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0) {
     TH1* unquenched = SampleUnquenchedSplit(n_samples, minPt, maxPt, n, beta);
     TH1* difference = DifferenceSpectrum(n_samples, minPt, maxPt, n, beta, jets, normalization);
-    char name[100];
-    snprintf(name, 100, "quot_b=%.2f_DE=%.2f", fB, normalization);
+    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
     TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
     quot->Divide(difference, unquenched);
     delete unquenched;
@@ -402,46 +409,123 @@ TH1* Collision::SpectraRatio(Int_t n_samples = 10000, Double_t minPt=20.0, Doubl
     return quot;
 }
 
-void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t start_b=4.0, Double_t end_b=6.5, Double_t step_b=0.5, Double_t minPt=20.0, Double_t maxPt = 320.0, Double_t n_quark=5.0, Double_t beta_quark=0.0, Double_t n_gluon=5.0, Double_t beta_gluon=0.0, Double_t quarkFrac=1.0) {
+TH1* Collision::QGSpectraRatio(Int_t n_samples = 10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.34) {
+    TH1* unquenchedQuark = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_quark, beta_quark);
+    TH1* unquenchedGluon = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_gluon, beta_gluon);
+    TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, normalization);
+    TH1* differenceGluon = DifferenceSpectrum(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*normalization);
+    Double_t gCoef = GluonFracCoef(quarkFrac, differenceQuark, differenceGluon);
+
+    TH1* numerator = new TH1F("num", "num", maxPt, 0, maxPt);
+    TH1* denominator = new TH1F("den", "den", maxPt, 0, maxPt);
+    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
+    TH1* ratio = new TH1F(TString::Format("quarks_plus_gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+    TH1* q_ratio = new TH1F(TString::Format("quarks_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+    TH1* g_ratio = new TH1F(TString::Format("gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+
+    numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
+    denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
+    q_ratio->Divide(differenceQuark, unquenchedQuark);
+    g_ratio->Divide(differenceGluon, unquenchedGluon);
+    ratio->Divide(numerator, denominator);
+    q_ratio->Write();
+    g_ratio->Write();
+
+    delete q_ratio;
+    delete g_ratio;
+    delete unquenchedQuark;
+    delete unquenchedGluon;
+    delete differenceQuark;
+    delete differenceGluon;
+    delete numerator;
+    delete denominator;
+    return ratio;
+
+}
+
+
+//Calculate an adjustment coefficent to make the ratio of quarks to gluons correct at the refernce Pt value
+//we chose to multiply the gluon distribution
+Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
+    Int_t bins = quarks->GetNbinsX();
+    TH1F* ratio = new TH1F("ratio", "ratio", bins, 0, bins);
+    ratio->Divide(quarks, gluons);
+    //make sure we can pick a bin
+    Int_t irefE = (int)round(refE);
+    Double_t gCoef = ratio->GetBinContent(irefE)*(1-f0)/f0;
+    //cout << ratio->GetBinContent(irefE) << endl;
+    //cout << gCoef;
+    delete ratio;
+    return gCoef;
+}
+
+void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t b=0, Double_t minPt=20.0, Double_t maxPt = 640.0, Double_t n_quark=4.19, Double_t beta_quark=0.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.34) {
     TFile* f = TFile::Open(outfile, "recreate");
-    Collision *coll;
-    Double_t b = start_b;
+    Collision coll = Collision(6.62, .546, b);
+    Double_t deltaE = startDeltaE;
+    Double_t gluonFrac= 1-quarkFrac;
+    Double_t gluonCoef;
+    TH1* q_ratio;
+    TH1* g_ratio;
+    TH1* ratio;
+    while (deltaE < endDeltaE) {
+        if (quarkFrac != 1.0) {
+            ratio = coll.QGSpectraRatio(n_samples, jets, deltaE, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quarkFrac);
+            /* 
+            g_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
+            g_ratio->SetName("gluons");
+            g_ratio->Write();
+            ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
+            */
+        }
+        else {
+            ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
+        }
+        //ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
+        //q_ratio->SetName("quarks");
+        ratio->Write();
+        delete ratio;
+        //q_ratio->Write();
+        deltaE += stepE;
+    }
+    f->Close();
+}
+
+/*
+void MakeSpectraTheta(TString outfile, Int_t n_samples=10000, TH2* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t b=0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=0.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.25) {
+    TFile* f = TFile::Open(outfile, "recreate");
+    Collision coll = Collision(6.62, .546, b);
     Double_t deltaE = startDeltaE;
     Double_t gluonFrac = 1.0-quarkFrac;
     TH1* q_ratio;
     TH1* g_ratio;
     TH1* ratio = new TH1F("ratio", "ratio", maxPt, 0, maxPt);
-    while (b < end_b) {
-        coll = new Collision(6.62, .546, b);
-        while (deltaE < endDeltaE) {
-            q_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
-            if (quarkFrac != 1.0) {
-                g_ratio = coll->SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
-                g_ratio->SetName("gluons");
-                g_ratio->Write();
-                ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
-            }
-            else {
-                ratio = q_ratio;
-            }
-            ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
-            q_ratio->SetName("quarks");
-            ratio->Write();
-            q_ratio->Write();
-            deltaE += stepE;
+    while (deltaE < endDeltaE) {
+        q_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
+        if (quarkFrac != 1.0) {
+            g_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
+            g_ratio->SetName("gluons");
+            g_ratio->Write();
+            ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
         }
-        deltaE = startDeltaE;
-        b += step_b;
+        else {
+            ratio = q_ratio;
+        }
+        ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
+        q_ratio->SetName("quarks");
+        ratio->Write();
+        q_ratio->Write();
+        deltaE += stepE;
     }
     f->Close();
 }
+*/
 
 TH1* LoadJets(const char* filename) {
     TFile *f = TFile::Open(filename);
     TList *l = f->GetListOfKeys();
     TString name = l->First()->GetName();
     TH1* jets = (TH1*)f->Get(name);
-    f->Close();
     return jets;
 }
 
@@ -532,5 +616,19 @@ Double_t CentralityBin(Double_t endFrac=.10) {
     Double_t area = 1000*CROSS_SECTION*(endFrac);
     Double_t b2 = area/(10*TMath::Pi()); //b squared (factor of 10 for mb to fm^2)
     return TMath::Sqrt(b2);
+}
+
+TH1* HistDiff(TH2* h) {
+    Int_t nbinsx = h->GetNbinsX();
+    Int_t nbinsy = h->GetNbinsY();
+    Int_t count = 0;
+    TH1* diff = new TH1F("Difference", "Difference", 2*nbinsx, -nbinsx, nbinsx);
+    for (Int_t i =0; i < nbinsx; i++) {
+        for (Int_t j=0; j < nbinsy; j++) {
+            count = h->GetBinContent(i, j);
+            diff->Fill(i-j, count);
+        }
+    }
+    return diff;
 }
 

@@ -18,6 +18,10 @@ class Collision;
 const Double_t INFTY = TMath::Infinity();
 const Double_t EPSILON = pow(10, -7);
 const Double_t GLUON_RATIO = 9.0/4.0; //ratio of gluon energy suppression to quark energy suppression
+const Double_t CROSS_SECTION = 7.7; //barnes
+const Double_t QUARK_QUARK = 0;
+const Double_t QUARK_GLUON = 1; 
+const Double_t GLUON_GLUON = 2;
 
 class Nucleus 
 {
@@ -68,7 +72,7 @@ class Collision {
         TF2*        CalcRhoJet();
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
-        Double_t    JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t theta=0);
         Double_t    GetNormalizationDeltaE(Double_t normalization, Double_t alpha);
 
     public:
@@ -85,15 +89,15 @@ class Collision {
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
         TF2*        GetRhoJet()     const {return fRhoJet;}
-        TF1*        CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
+        TF1*        CalcJetIntegrand(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t theta=0);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
-        TF1*        JetOfTheta(Double_t alpha, Double_t x0, Double_t y0);
+        TF1*        JetOfTheta(Double_t alpha=0, Double_t x0=0, Double_t y0=0);
 
         TH1*        SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
         TH2*       SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax); 
-        TH2*       SampleJetsPaired(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
-        pair<Double_t, Double_t> SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
-        pair<Double_t, Double_t> SampleJetPair(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+        TH2*       SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
+        pair<Double_t, Double_t> SampleJet(Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        pair<Double_t, Double_t> SampleJetPair(Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
 
         TH1*        Unquenched(Double_t minPt, Double_t n, Double_t beta);
         TF1*        UnquenchedTF(Double_t minPt, Double_t n, Double_t beta);
@@ -101,6 +105,7 @@ class Collision {
         TH1*        SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Double_t beta);  
         TH1*        SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization);
         TH1*        SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta);
+        TH1*        QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac);
 };
 
         
@@ -192,7 +197,9 @@ struct JetIntegrand {
         Double_t x0    = par[1];
         Double_t y0    = par[2];
         Double_t theta = par[3];
+        theta = theta*TMath::Pi()/180.0;
         Double_t l = x[0];
+        //IN RADIANS
         Double_t cosTheta = TMath::Cos(theta);
         Double_t sinTheta = TMath::Sin(theta);
         Double_t xx = l*cosTheta + x0;
@@ -249,5 +256,7 @@ struct RhoJet {
     TF1* fTA;
     TF1* fTB;
 };
+
+Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE=25.0);
 
 #endif
