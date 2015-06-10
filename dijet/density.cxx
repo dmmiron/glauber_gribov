@@ -113,7 +113,7 @@ TF1* Collision::CalcNuA() {
 
 TF1* Collision::CalcPScatA() {
     PScat *pScat = new PScat(fNuA);
-    TF1* PScatA = new TF1("NuA", pScat, 0, INFTY, 0, "PScat");
+    TF1* PScatA = new TF1("PScatA", pScat, 0, INFTY, 0, "PScat");
     //cout << PScatA->Eval(1) << endl;
     return PScatA;
 }
@@ -121,15 +121,15 @@ TF1* Collision::CalcPScatA() {
 TF1* Collision::CalcNuB() {
     TF1* thickness = fNucleusB->GetThicknessFunc();
     MultFunc *multFunc = new MultFunc(thickness);
-    TF1* NuB = new TF1("NuA", multFunc, 0, INFTY, 1, "multFunc");
+    TF1* NuB = new TF1("NuB", multFunc, 0, INFTY, 1, "multFunc");
     NuB->SetParameter(0, fSigNN);
     //cout << NuB->Eval(1) << endl;
     return NuB;
 }
 
 TF1* Collision::CalcPScatB() {
-    PScat *pScat = new PScat(fNuA);
-    TF1* PScatB = new TF1("NuA", pScat, 0, INFTY, 0, "PScat");
+    PScat *pScat = new PScat(fNuB);
+    TF1* PScatB = new TF1("PScatB", pScat, 0, INFTY, 0, "PScat");
     //cout << PScatB->Eval(1) << endl;
     return PScatB;
 }
@@ -159,7 +159,6 @@ Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Doub
 }
 */
 
-//THIS FUNCTION IS IN RADIANS, REST OF UI IN DEGREES
 TF1* Collision::JetOfTheta(Double_t alpha, Double_t x0, Double_t y0) {
     TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, 0);
     CalcJet* jet = new CalcJet(JetInt);
@@ -260,6 +259,7 @@ TH1* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin
     return h;
 }
 
+//theta outside of [0, 360] means uniform sampling
 TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", theta), 100, 0, 50, 100, 0, 50);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
@@ -433,9 +433,7 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     delete numerator;
     delete denominator;
     return ratio;
-
 }
-
 
 //Calculate an adjustment coefficent to make the ratio of quarks to gluons correct at the refernce Pt value
 //we chose to multiply the gluon distribution
@@ -462,6 +460,7 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
     TH1* g_ratio;
     TH1* ratio;
     while (deltaE < endDeltaE) {
+        cout << "deltaE: " << deltaE << endl;
         if (quarkFrac != 1.0) {
             ratio = coll.QGSpectraRatio(n_samples, jets, deltaE, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quarkFrac);
             /* 
@@ -484,36 +483,6 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
     f->Close();
 }
 
-/*
-void MakeSpectraTheta(TString outfile, Int_t n_samples=10000, TH2* jets=0, Double_t startDeltaE=5.0, Double_t endDeltaE=20.0, Double_t stepE=1.0, Double_t b=0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=0.71, Double_t n_gluon=4.69, Double_t beta_gluon=0.80, Double_t quarkFrac=0.25) {
-    TFile* f = TFile::Open(outfile, "recreate");
-    Collision coll = Collision(6.62, .546, b);
-    Double_t deltaE = startDeltaE;
-    Double_t gluonFrac = 1.0-quarkFrac;
-    TH1* q_ratio;
-    TH1* g_ratio;
-    TH1* ratio = new TH1F("ratio", "ratio", maxPt, 0, maxPt);
-    while (deltaE < endDeltaE) {
-        q_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
-        if (quarkFrac != 1.0) {
-            g_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
-            g_ratio->SetName("gluons");
-            g_ratio->Write();
-            ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
-        }
-        else {
-            ratio = q_ratio;
-        }
-        ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
-        q_ratio->SetName("quarks");
-        ratio->Write();
-        q_ratio->Write();
-        deltaE += stepE;
-    }
-    f->Close();
-}
-*/
-
 TH1* LoadJets(const char* filename) {
     TFile *f = TFile::Open(filename);
     TList *l = f->GetListOfKeys();
@@ -521,7 +490,6 @@ TH1* LoadJets(const char* filename) {
     TH1* jets = (TH1*)f->Get(name);
     return jets;
 }
-
 
 TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
     Double_t jet1;
@@ -542,69 +510,6 @@ TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
     }
     return subleading;
 }
-
-TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
-    Double_t jetLoss1;
-    Double_t jetLoss2;
-    Double_t jet1;
-    Double_t jet2;
-    TH2* subleading = new TH2F("Subleading ratio", "Subleading ratio", 100, 0, 1, maxPt, 0, maxPt);
-    
-    Collision* coll = new Collision(6.62, .546, 5);
-    TF1* unquenchedTF = coll->UnquenchedTF(minPt);
-    TH1* temp;  
-    Double_t scale;
-    Int_t count = 0;
-    Double_t startPt = minPt;
-    Double_t unquenchedJet;
-    Double_t asymmetry;
-    
-    temp = new TH2F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1, maxPt, 0, maxPt);
-    while (startPt < maxPt) {
-        scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
-        while (count < n_samples) {
-            jets->GetRandom2(jetLoss1, jetLoss2);
-            unquenchedJet = unquenchedTF->GetRandom(startPt, 2.0*startPt); 
-            if (pair_type == QUARK_GLUON) {
-                jetLoss1 = GLUON_RATIO*jetLoss1;
-            }
-            else if (pair_type == GLUON_GLUON) {
-                jetLoss1 = GLUON_RATIO*jetLoss1;
-                jetLoss2 = GLUON_RATIO*jetLoss2;
-            }
-            jet1 = unquenchedJet-jetLoss1;
-            jet2 = unquenchedJet-jetLoss2;
-            if ((jet1 >= 0) && (jet2 >= 0)) {
-                if (jet1 > jet2) {
-                    if (x_j) {
-                        asymmetry = jet2/jet1;
-                    }
-                    else {
-                        asymmetry = (jet1-jet2)/(jet1+jet2);
-                    }
-                    temp->Fill(asymmetry, jet1);
-                }
-                else {
-                    if (x_j) {
-                        asymmetry = jet1/jet2;
-                    }
-                    else {
-                        asymmetry = (jet2-jet1)/(jet1+jet2);
-                    }
-                    temp->Fill(asymmetry, jet2);
-                }
-                count++;
-            }
-        }
-        count = 0;
-        subleading->Add(temp, scale);
-        temp->Reset();
-        startPt = startPt*2.0;
-    }
-    delete temp;
-    return subleading;
-}
-
 Double_t CentralityBin(Double_t endFrac) {
     Double_t area = 1000*CROSS_SECTION*(endFrac);
     Double_t b2 = area/(10*TMath::Pi()); //b squared (factor of 10 for mb to fm^2)
@@ -624,4 +529,3 @@ TH1* HistDiff(TH2* h) {
     }
     return diff;
 }
-
