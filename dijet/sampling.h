@@ -2,6 +2,7 @@
 #define __SAMPLING_CXX__
 
 #include "density.h"
+#include <THStack.h>
 
 
 TH1* LoadJets(TString filename);
@@ -19,6 +20,10 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH1* jets=0, Double_t s
 
 TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets=0, Double_t minPt=20.0, Double_t maxPt=320.0, Int_t pair_type=QUARK_QUARK, Bool_t x_j=true);
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt1=100, Double_t maxPt1=100); 
+TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt=100, Double_t maxPt=200); 
+
+TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2);
+
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t minPt=100, Double_t maxPt=200);
 #endif
 

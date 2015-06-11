@@ -1,6 +1,8 @@
 #include "sampling.h"
 #include "density.h"
 
+#include <TH3.h>
+
 void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const char* dir_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TString name;
     TFile *f;
@@ -23,7 +25,7 @@ void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const 
 
 
 
-TH1* LoadJets(const char* filename) {
+TH1* LoadJets(TString filename) {
     TFile *f = TFile::Open(filename);
     TList *l = f->GetListOfKeys();
     TString name = l->First()->GetName();
@@ -180,12 +182,46 @@ void ClearBins(TH2* hist, Int_t lowx, Int_t highx, Int_t lowy, Int_t highy) {
     }
 }
 
+TString FlavorToString(Int_t flavor) {
+    if (flavor == QUARK_QUARK) {
+        return "qq";
+    }
+    else if(flavor == QUARK_GLUON) {
+        return "qg";
+    }
+    else if(flavor == GLUON_QUARK) {
+        return "gq";
+    }
+    else {
+        return "gg";
+    }
+}
 
+TString FlavorToString(Int_t flavor1, Int_t flavor2)
+{
+    if (flavor1 == QUARK) {
+        if (flavor2 == QUARK) {
+            return "qq";
+        }
+        else {
+            return "qg";
+        }
+    }
+    else {
+        if (flavor2 == QUARK) {
+            return "gq";
+        }
+        else {
+            return "gg";
+        }
+    }
+}
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples, Int_t flavor1, Int_t flavor2, Double_t minPt1, Double_t maxPt1) {
+TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
+    TH2* initial = (TH2*)initial_in->Clone();
     TAxis* pt1 = initial->GetXaxis();
-    Int_t binlow = pt1->FindBin(minPt1);
-    Int_t binhigh = pt1->FindBin(maxPt1);
+    Int_t binlow = pt1->FindBin(minPt);
+    Int_t binhigh = pt1->FindBin(maxPt);
     ClearBins(initial, 0, binlow, 0, -1);
     ClearBins(initial, binhigh+1, -1, 0, -1);
     pt1->SetRange(binlow, binhigh);
@@ -197,7 +233,9 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples, Int_t flavo
     Double_t coef2=1;
     Double_t out1;
     Double_t out2;
-    TH1* x_j = new TH1F("Jet Asymmetry", "x_j", 100, 0, 1);
+    TString name = TString("x_j_")+FlavorToString(flavor1, flavor2);
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* x_j = new TH1F(name, title, 100, 0, 1);
     if (flavor1 == GLUON) {
         coef1 = GLUON_RATIO;
     }
@@ -210,10 +248,12 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples, Int_t flavo
         loss->GetRandom2(loss1, loss2);
         out1 = jet1-coef1*loss1;
         out2 = jet2-coef2*loss2;
+        /* FOR DEBUGGING
         if (count % 1000 == 0) {
             cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
             cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
         }
+        */
         if (out1 >= 0 && out2 >=0) {
             if (out1 > out2) {
                 x_j->Fill(out2/out1);
@@ -227,3 +267,51 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples, Int_t flavo
     }
     return x_j;
 }
+
+TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
+    TFile* f = TFile::Open("initial/total.root");
+    TString flavors = FlavorToString(flavor1, flavor2);
+    flavors.ToUpper();
+    TString name = TString("h3_pt1_pt2_dphi_") + flavors;
+    /*
+    if (flavor1 == QUARK) {
+        if (flavor2 == QUARK) {
+            name = "h3_pt1_pt2_dphi_QQ";
+        }
+        else {
+            name = "h3_pt1_pt2_dphi_QG";
+        }
+    }
+    else {
+        if (flavor2 == QUARK) {
+            name = "h3_pt1_pt2_dphi_GQ";
+        }
+        else {
+            name = "h3_pt1_pt2_dphi_GG";
+        }
+    }
+    */
+    TH3* init = (TH3*)f->Get(name);
+    return (TH2*)init->Project3DProfile("yx");
+}
+
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t minPt, Double_t maxPt) {
+    TH2* loss = (TH2*)LoadJets(lossFile);
+    TH2* initial;
+    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, minPt=%.1f, maxPt=%.1f)", b, minPt, maxPt));
+    initial = LoadPYTHIA(QUARK, QUARK);
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, QUARK, QUARK, minPt, maxPt));
+    initial = LoadPYTHIA(QUARK, GLUON);
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, QUARK, GLUON, minPt, maxPt));
+    initial = LoadPYTHIA(GLUON, QUARK);
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, GLUON, QUARK, minPt, maxPt));
+    initial = LoadPYTHIA(GLUON, GLUON);
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, GLUON, GLUON, minPt, maxPt));
+   return stack;
+}
+
+
+
+    
+
+
