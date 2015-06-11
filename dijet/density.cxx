@@ -318,6 +318,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     //renormalize deltaE distribution
     //note fixing this from calculating the mean from a new sample every time should be a major speed increase
     //normalization = normalization/jets->GetMean();
+    normalization /= JET_MEAN_LOSS;
     
     //CLEAN UP THIS LOOP
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);

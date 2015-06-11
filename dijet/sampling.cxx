@@ -66,7 +66,7 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
 
 
 
-TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
+TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
     Double_t jetLoss1;
     Double_t jetLoss2;
     Double_t jet1;
@@ -81,6 +81,7 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t minPt, Double_t maxPt,
     Double_t startPt = minPt;
     Double_t unquenchedJet;
     Double_t asymmetry;
+    normalization /= JET_MEAN_LOSS;
 
     temp = new TH2F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1, maxPt, 0, maxPt);
     while (startPt < maxPt) {
@@ -95,8 +96,8 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t minPt, Double_t maxPt,
                 jetLoss1 = GLUON_RATIO*jetLoss1;
                 jetLoss2 = GLUON_RATIO*jetLoss2;
             }
-            jet1 = unquenchedJet-jetLoss1;
-            jet2 = unquenchedJet-jetLoss2;
+            jet1 = unquenchedJet-normalization*jetLoss1;
+            jet2 = unquenchedJet-normalization*jetLoss2;
             if ((jet1 >= 0) && (jet2 >= 0)) {
                 if (jet1 > jet2) {
                     if (x_j) {
@@ -217,7 +218,7 @@ TString FlavorToString(Int_t flavor1, Int_t flavor2)
     }
 }
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
+TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
     TH2* initial = (TH2*)initial_in->Clone();
     TAxis* pt1 = initial->GetXaxis();
     Int_t binlow = pt1->FindBin(minPt);
@@ -229,18 +230,19 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Int_t fl
     Double_t jet2;
     Double_t loss1;
     Double_t loss2;
-    Double_t coef1=1; 
-    Double_t coef2=1;
+    normalization /= JET_MEAN_LOSS;
+    Double_t coef1=normalization; 
+    Double_t coef2=normalization;
     Double_t out1;
     Double_t out2;
     TString name = TString("x_j_")+FlavorToString(flavor1, flavor2);
     TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-    TH1* x_j = new TH1F(name, title, 100, 0, 1);
+    TH1* x_j = new TH1F(name, title, 200, -1, 1);
     if (flavor1 == GLUON) {
-        coef1 = GLUON_RATIO;
+        coef1 = normalization*GLUON_RATIO;
     }
     if (flavor2 == GLUON) {
-        coef2 = GLUON_RATIO;
+        coef2 = normalization*GLUON_RATIO;
     }
     Int_t count = 0;
     while (count < n_samples) {
@@ -254,16 +256,23 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Int_t fl
             cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
         }
         */
-        if (out1 >= 0 && out2 >=0) {
+        if (out1 >= 0 && out2 >= 0) {
             if (out1 > out2) {
                 x_j->Fill(out2/out1);
-                count++;
             }
             else if (out2 > out1) {
                 x_j->Fill(out1/out2);
-                count++;
             }
         }
+        else {
+            if (out1 > -out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (-out2 > out1) {
+                x_j->Fill(out1/out2);
+            } 
+        }
+        count++;
     }
     return x_j;
 }
@@ -295,18 +304,18 @@ TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     return (TH2*)init->Project3DProfile("yx");
 }
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t minPt, Double_t maxPt) {
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
-    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, minPt=%.1f, maxPt=%.1f)", b, minPt, maxPt));
+    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, minPt=%.1f, maxPt=%.1f)", b, normalization, minPt, maxPt));
     initial = LoadPYTHIA(QUARK, QUARK);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, QUARK, QUARK, minPt, maxPt));
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, QUARK, QUARK, minPt, maxPt));
     initial = LoadPYTHIA(QUARK, GLUON);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, QUARK, GLUON, minPt, maxPt));
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, QUARK, GLUON, minPt, maxPt));
     initial = LoadPYTHIA(GLUON, QUARK);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, GLUON, QUARK, minPt, maxPt));
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, QUARK, minPt, maxPt));
     initial = LoadPYTHIA(GLUON, GLUON);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, GLUON, GLUON, minPt, maxPt));
+    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, GLUON, minPt, maxPt));
    return stack;
 }
 
