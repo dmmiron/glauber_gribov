@@ -223,8 +223,8 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
     TAxis* pt1 = initial->GetXaxis();
     Int_t binlow = pt1->FindBin(minPt);
     Int_t binhigh = pt1->FindBin(maxPt);
-    ClearBins(initial, 0, binlow, 0, -1);
-    ClearBins(initial, binhigh+1, -1, 0, -1);
+    ClearBins(initial, 0, binlow, 0, 1000);
+    ClearBins(initial, binhigh+1, 1000, 0, 1000);
     pt1->SetRange(binlow, binhigh);
     Double_t jet1; 
     Double_t jet2;
@@ -301,7 +301,7 @@ TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     }
     */
     TH3* init = (TH3*)f->Get(name);
-    return (TH2*)init->Project3DProfile("yx");
+    return (TH2*)init->Project3D("yx");
 }
 
 THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt) {
@@ -318,9 +318,4 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t norm
     stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, GLUON, minPt, maxPt));
    return stack;
 }
-
-
-
-    
-
 
