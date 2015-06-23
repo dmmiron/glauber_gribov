@@ -2,6 +2,12 @@
 #include "density.h"
 
 #include <TH3.h>
+#include <cstdlib>
+#include <TSystemDirectory.h>
+#include <TSystemFile.h>
+#include <TRegexp.h>
+
+using namespace std;
 
 void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const char* dir_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TString name;
@@ -316,6 +322,60 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t norm
     stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, QUARK, minPt, maxPt));
     initial = LoadPYTHIA(GLUON, GLUON);
     stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, GLUON, minPt, maxPt));
-   return stack;
+    return stack;
 }
+
+//Fix fraction
+//should be given set of three?
+TH1* Combine(THStack *plots, vector<Double_t> fracs) {
+    TH1* combined;
+    TIter next(plots->GetHists());
+    combined = (TH1*)next()->Clone();
+    vector<Double_t>::iterator it = fracs.begin();
+    combined->Scale(*it);
+    it++;
+    combined->SetName("Combined");
+    combined->SetTitle("combined");
+    while (TH1* hist = (TH1*)next()) {
+        combined->Add(hist, *it);
+        it++;
+    }
+    return combined;
+}
+
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt);
+    TH1* combined = Combine(hists, fracs);
+    hists->Add(combined);
+    return hists;
+}
+
+TList* GetFiles(TString dirname) {
+    TSystemDirectory dir(dirname, dirname);
+    return dir.GetListOfFiles();
+}
+
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
+    TList* files = GetFiles(dirname);
+    TList.Sort();
+    THStack* hists;
+    vector<THStack*> stacks;
+    Double_t b;
+    TRegexp regex = TRegexp("b[0-9]*");
+    if (files) {
+        TSystemFile *file;
+        TIter next(files);
+        TString fname;
+        while ((file=(TSystemFile*)next())) {
+            fname = dirname + file->GetName();
+            TString sub(fname(regex));
+            b = TString(sub(1, sub.Length())).Atof();
+            if (!file->IsDirectory()) {
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, minPt, maxPt, fracs));
+            }
+        }
+    }
+    return stacks;
+}
+
 

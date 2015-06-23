@@ -24,7 +24,15 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Doubl
 
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2);
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100, Double_t maxPt=200);
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0);
 
+TH1* Combine(THStack *plots, vector<Double_t> fracs);
+
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, vector<Double_t> fracs = {.25, .25, .25, .25});
+
+
+TList* GetFiles(TString dirname);
+
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, vector<Double_t> fracs = {.25, .25, .25, .25});
 #endif
 
