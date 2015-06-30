@@ -1,11 +1,11 @@
 #include "sampling.h"
 #include "density.h"
 
-#include <TH3.h>
 #include <cstdlib>
 #include <TSystemDirectory.h>
 #include <TSystemFile.h>
 #include <TRegexp.h>
+#include <TKey.h>
 
 using namespace std;
 
@@ -241,9 +241,11 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
     Double_t coef2=normalization;
     Double_t out1;
     Double_t out2;
-    TString name = TString("x_j_")+FlavorToString(flavor1, flavor2);
+    TString name = FlavorToString(flavor1, flavor2);
     TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
     TH1* x_j = new TH1F(name, title, 200, -1, 1);
+    SetAxes(x_j, "x_j");
+     
     if (flavor1 == GLUON) {
         coef1 = normalization*GLUON_RATIO;
     }
@@ -283,29 +285,95 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
     return x_j;
 }
 
+Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs) {
+    //sample from histogram where [0-1) = QQ, [1-2) = QG, [2-3) = GQ, [3-4) = GG
+    TH1* flavors = new TH1F("flavors", "fracs", 4, 0, 4);
+    for (Int_t i = 0; i < 4; i++) {
+        flavors->Fill(i, fracs[i]->GetBinContent(bin));
+    }
+    return TMath::Floor(flavors->GetRandom());
+}
+
+TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+    TH2* initial = (TH2*)initial_in->Clone();
+    TAxis* pt1 = initial->GetXaxis();
+    Int_t binlow = pt1->FindBin(minPt);
+    Int_t binhigh = pt1->FindBin(maxPt);
+    ClearBins(initial, 0, binlow, 0, 1000);
+    ClearBins(initial, binhigh+1, 1000, 0, 1000);
+    pt1->SetRange(binlow, binhigh);
+    Double_t jet1; 
+    Double_t jet2;
+    Double_t loss1;
+    Double_t loss2;
+    normalization /= JET_MEAN_LOSS;
+    Double_t coef1=normalization; 
+    Double_t coef2=normalization;
+    Double_t out1;
+    Double_t out2;
+    TString name = "combined";
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* x_j = new TH1F(name, title, 200, -1, 1);
+    SetAxes(x_j, "x_j");
+    Int_t count = 0;
+    Int_t bin;
+    Int_t flavor_pair;
+    while (count < n_samples) {
+        initial->GetRandom2(jet1, jet2);
+        bin = initial->FindBin(jet1);
+        flavor_pair = GetFlavorPair(bin, fracs);
+        if (flavor_pair == GLUON_QUARK) {
+            coef1 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == QUARK_GLUON) {
+            coef2 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == GLUON_GLUON) { 
+            coef1 = normalization*GLUON_RATIO;
+            coef2 = normalization*GLUON_RATIO;
+        }
+        loss->GetRandom2(loss1, loss2);
+        out1 = jet1-coef1*loss1;
+        out2 = jet2-coef2*loss2;
+        /* FOR DEBUGGING
+        if (count % 1000 == 0) {
+            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
+            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
+        }
+        */
+        if (out1 >= 0 && out2 >= 0) {
+            if (out1 > out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (out2 > out1) {
+                x_j->Fill(out1/out2);
+            }
+        }
+        else {
+            if (out1 > -out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (-out2 > out1) {
+                x_j->Fill(out1/out2);
+            } 
+        }
+        count++;
+    }
+    return x_j;
+}
+
+
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     TFile* f = TFile::Open("initial/total.root");
-    TString flavors = FlavorToString(flavor1, flavor2);
-    flavors.ToUpper();
-    TString name = TString("h3_pt1_pt2_dphi_") + flavors;
-    /*
-    if (flavor1 == QUARK) {
-        if (flavor2 == QUARK) {
-            name = "h3_pt1_pt2_dphi_QQ";
-        }
-        else {
-            name = "h3_pt1_pt2_dphi_QG";
-        }
+    TString name;
+    if (flavor1 < 0) {
+        name = TString("h3_pt1_pt2_dphi_All");
+    } 
+    else { 
+        TString flavors = FlavorToString(flavor1, flavor2);
+        flavors.ToUpper();
+        TString name = TString("h3_pt1_pt2_dphi_") + flavors;
     }
-    else {
-        if (flavor2 == QUARK) {
-            name = "h3_pt1_pt2_dphi_GQ";
-        }
-        else {
-            name = "h3_pt1_pt2_dphi_GG";
-        }
-    }
-    */
     TH3* init = (TH3*)f->Get(name);
     return (TH2*)init->Project3D("yx");
 }
@@ -331,11 +399,11 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
     TH1* combined;
     TIter next(plots->GetHists());
     combined = (TH1*)next()->Clone();
+    combined->SetName("Combined");
+    combined->SetTitle("combined");
     vector<Double_t>::iterator it = fracs.begin();
     combined->Scale(*it);
     it++;
-    combined->SetName("Combined");
-    combined->SetTitle("combined");
     while (TH1* hist = (TH1*)next()) {
         combined->Add(hist, *it);
         it++;
@@ -357,7 +425,7 @@ TList* GetFiles(TString dirname) {
 
 vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
     TList* files = GetFiles(dirname);
-    TList.Sort();
+    files->Sort();
     THStack* hists;
     vector<THStack*> stacks;
     Double_t b;
@@ -378,4 +446,35 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
     return stacks;
 }
 
+void SetAxes(TH1* hist, TString xtitle) {
+    TAxis* axis = hist->GetXaxis();
+    axis->SetTitle(xtitle);
+}
+
+void SetAxes(TH2* hist, TString xtitle, TString ytitle) {
+    TAxis* axis = hist->GetXaxis();
+    axis->SetTitle(xtitle);
+    axis = hist->GetYaxis();
+    axis->SetTitle(ytitle);
+}
+
+void SetAxes(TH3* hist, TString xtitle, TString ytitle, TString ztitle) {
+    TAxis* axis = hist->GetXaxis();
+    axis->SetTitle(xtitle);
+    axis = hist->GetYaxis();
+    axis->SetTitle(ytitle);
+    axis = hist->GetZaxis();
+    axis->SetTitle(ztitle);
+}
+
+vector<TH1*> LoadFracs(TString filename) {
+    vector<TH1*> fracs;
+    TFile* f = TFile::Open(filename);
+    TIter nextkey(f->GetListOfKeys());
+    TKey *key;
+    while ((key = (TKey*)nextkey())) {
+        fracs.push_back((TH1*)key->ReadObj());
+    }
+    return fracs;
+}
 

@@ -3,6 +3,7 @@
 
 #include "density.h"
 #include <THStack.h>
+#include <TH3.h>
 
 
 TH1* LoadJets(TString filename);
@@ -34,5 +35,12 @@ THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Doubl
 TList* GetFiles(TString dirname);
 
 vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, vector<Double_t> fracs = {.25, .25, .25, .25});
+
+void SetAxes(TH1* hist, TString xtitle="");
+
+void SetAxes(TH2* hist, TString xtitle="", TString ytitle="");
+
+void SetAxes(TH3* hist, TString xtitle="", TString ytitle="", TString ztitle="");
+
 #endif
 
