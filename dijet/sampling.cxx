@@ -291,7 +291,9 @@ Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs) {
     for (Int_t i = 0; i < 4; i++) {
         flavors->Fill(i, fracs[i]->GetBinContent(bin));
     }
-    return TMath::Floor(flavors->GetRandom());
+    Int_t flavor = TMath::Floor(flavors->GetRandom());
+    delete flavors;
+    return flavor;
 }
 
 TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
@@ -366,19 +368,20 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     TFile* f = TFile::Open("initial/total.root");
     TString name;
-    if (flavor1 < 0) {
+    if (flavor1 == ALL || flavor2 == ALL) {
         name = TString("h3_pt1_pt2_dphi_All");
     } 
     else { 
         TString flavors = FlavorToString(flavor1, flavor2);
         flavors.ToUpper();
-        TString name = TString("h3_pt1_pt2_dphi_") + flavors;
+        name = TString("h3_pt1_pt2_dphi_") + flavors;
     }
+    cout << name << endl;
     TH3* init = (TH3*)f->Get(name);
     return (TH2*)init->Project3D("yx");
 }
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt) {
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
     THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, minPt=%.1f, maxPt=%.1f)", b, normalization, minPt, maxPt));
@@ -390,6 +393,11 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t norm
     stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, QUARK, minPt, maxPt));
     initial = LoadPYTHIA(GLUON, GLUON);
     stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, GLUON, minPt, maxPt));
+    if (combined) {
+        vector<TH1*> fracs = LoadFracs("fractions.root");
+        initial = LoadPYTHIA(ALL, ALL);
+        stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, fracs, minPt, maxPt));
+    }
     return stack;
 }
 
@@ -412,7 +420,7 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
 }
 
 THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt);
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt, false);
     TH1* combined = Combine(hists, fracs);
     hists->Add(combined);
     return hists;

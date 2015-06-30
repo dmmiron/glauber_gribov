@@ -23,6 +23,7 @@ const Int_t QUARK_QUARK = 0;
 const Int_t QUARK_GLUON = 1; 
 const Int_t GLUON_QUARK = 2;
 const Int_t GLUON_GLUON = 3;
+const Int_t ALL = 4;
 const Int_t QUARK = 0;
 const Int_t GLUON = 1;
 const Int_t FLAVORS [4] = {QUARK_QUARK, QUARK_GLUON, GLUON_QUARK, GLUON_GLUON};

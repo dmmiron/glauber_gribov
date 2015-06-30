@@ -10,7 +10,6 @@ TH1* LoadJets(TString filename);
 
 TH1* SampleAsymmetryLoss(Int_t n=10000, TH2* jets=0);
 
-
 Double_t CentralityBin(Double_t endFrac);
 
 TH1* HistDiff(TH2* h);
@@ -23,18 +22,21 @@ TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets=0, Double_t normalization
 
 TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Double_t normalization=10.0, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt=100, Double_t maxPt=200); 
 
+TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Double_t normalization=10.0, vector<TH1*> fracs = vector<TH1*>(), Double_t minPt=100, Double_t maxPt=200); 
+
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2);
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0);
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, Bool_t combined=true);
 
 TH1* Combine(THStack *plots, vector<Double_t> fracs);
 
 THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, vector<Double_t> fracs = {.25, .25, .25, .25});
 
-
 TList* GetFiles(TString dirname);
 
 vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization=10.0, Double_t minPt=100.0, Double_t maxPt=200.0, vector<Double_t> fracs = {.25, .25, .25, .25});
+
+vector<TH1*> LoadFracs(TString filename);
 
 void SetAxes(TH1* hist, TString xtitle="");
 
