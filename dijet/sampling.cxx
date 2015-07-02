@@ -308,23 +308,33 @@ Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs) {
     return flavor;
 }
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
-    TH2* initial = (TH2*)initial_in->Clone();
-    TAxis* pt1 = initial->GetXaxis();
-    Int_t binlow = pt1->FindBin(minPt);
-    Int_t binhigh = pt1->FindBin(maxPt);
-    ClearBins(initial, 0, binlow, 0, 1000);
-    ClearBins(initial, binhigh+1, 1000, 0, 1000);
-    pt1->SetRange(binlow, binhigh);
-    Double_t jet1; 
-    Double_t jet2;
-    Double_t loss1;
-    Double_t loss2;
+TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+    vector<TH2*> initialJets = vector<TH2*>();
+    TH2* initial;
+    TH2* temp;
+    TH1* pt1_all;
+    TH1* pt2;
+    TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
+    Int_t binlow, binhigh;
+    for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
+        temp = *it;
+        initial = (TH2*)temp->Clone();
+        pt1_axis = initial->GetXaxis();
+        binlow = pt1_axis->FindBin(minPt);
+        binhigh = pt1_axis->FindBin(maxPt);
+        //FIX THE 1000 LIMIT
+        ClearBins(initial, 0, binlow, 0, 1000);
+        ClearBins(initial, binhigh+1, 1000, 0, 1000);
+        pt1_axis->SetRange(binlow, binhigh);
+        initialJets.push_back(initial);
+    }
+    initial = initialJets[initialJets.size()-1];
+    pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
+    Double_t jet1, jet2; 
+    Double_t loss1, loss2;
     normalization /= JET_MEAN_LOSS;
-    Double_t coef1=normalization; 
-    Double_t coef2=normalization;
-    Double_t out1;
-    Double_t out2;
+    Double_t coef1=normalization, coef2=normalization; 
+    Double_t out1, out2;
     TString name = "combined";
     TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
     TH1* x_j = new TH1F(name, title, 200, -1, 1);
@@ -333,9 +343,11 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
     Int_t bin;
     Int_t flavor_pair;
     while (count < n_samples) {
-        initial->GetRandom2(jet1, jet2);
-        bin = initial->FindBin(jet1);
+        jet1 = pt1_all->GetRandom();
+        bin = pt1_axis->FindBin(jet1);
         flavor_pair = GetFlavorPair(bin, fracs);
+        pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
+        jet2 = pt2->GetRandom();
         if (flavor_pair == GLUON_QUARK) {
             coef1 = normalization*GLUON_RATIO;
         }
@@ -397,18 +409,20 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t norm
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
     THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, minPt=%.1f, maxPt=%.1f)", b, normalization, minPt, maxPt));
-    initial = LoadPYTHIA(QUARK, QUARK);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, QUARK, QUARK, minPt, maxPt));
-    initial = LoadPYTHIA(QUARK, GLUON);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, QUARK, GLUON, minPt, maxPt));
-    initial = LoadPYTHIA(GLUON, QUARK);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, QUARK, minPt, maxPt));
-    initial = LoadPYTHIA(GLUON, GLUON);
-    stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, GLUON, GLUON, minPt, maxPt));
+    vector<TH2*> initialJets = vector<TH2*>();
+    //loop through quark, gluon combinations
+    for (Int_t i = 0; i<2; i++) {
+        for (Int_t j = 0; j<2; j++) {
+            initial = LoadPYTHIA(i, j);
+            initialJets.push_back(initial);
+            stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, i, j, minPt, maxPt));
+        }
+    }
     if (combined) {
         vector<TH1*> fracs = LoadFracs("fractions.root");
         initial = LoadPYTHIA(ALL, ALL);
-        stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, fracs, minPt, maxPt));
+        initialJets.push_back(initial);
+        stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, nsamples, normalization, fracs, minPt, maxPt));
     }
     return stack;
 }

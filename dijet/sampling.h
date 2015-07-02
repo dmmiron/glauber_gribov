@@ -24,7 +24,7 @@ TH2* SampleAsymmetry(Int_t n_samples=100000, TH2* jets=0, Double_t normalization
 
 TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Double_t normalization=10.0, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt=100, Double_t maxPt=200); 
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Int_t n_samples=10000, Double_t normalization=10.0, vector<TH1*> fracs = vector<TH1*>(), Double_t minPt=100, Double_t maxPt=200); 
+TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_samples=10000, Double_t normalization=10.0, vector<TH1*> fracs = vector<TH1*>(), Double_t minPt=100, Double_t maxPt=200); 
 
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2);
 
