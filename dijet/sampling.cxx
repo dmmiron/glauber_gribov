@@ -419,10 +419,15 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
     return combined;
 }
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
     THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt, false);
     TH1* combined = Combine(hists, fracs);
     hists->Add(combined);
+    return hists;
+}
+
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt, true);
     return hists;
 }
 
@@ -431,7 +436,7 @@ TList* GetFiles(TString dirname) {
     return dir.GetListOfFiles();
 }
 
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt, vector<Double_t> fracs) {
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
     files->Sort();
     THStack* hists;
@@ -447,13 +452,35 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
             TString sub(fname(regex));
             b = TString(sub(1, sub.Length())).Atof();
             if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, minPt, maxPt, fracs));
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, fracs, minPt, maxPt));
             }
         }
     }
     return stacks;
 }
 
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
+    TList* files = GetFiles(dirname);
+    files->Sort();
+    THStack* hists;
+    vector<THStack*> stacks;
+    Double_t b;
+    TRegexp regex = TRegexp("b[0-9]*");
+    if (files) {
+        TSystemFile *file;
+        TIter next(files);
+        TString fname;
+        while ((file=(TSystemFile*)next())) {
+            fname = dirname + file->GetName();
+            TString sub(fname(regex));
+            b = TString(sub(1, sub.Length())).Atof();
+            if (!file->IsDirectory()) {
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, minPt, maxPt));
+            }
+        }
+    }
+    return stacks;
+}
 void SetAxes(TH1* hist, TString xtitle) {
     TAxis* axis = hist->GetXaxis();
     axis->SetTitle(xtitle);
@@ -486,3 +513,13 @@ vector<TH1*> LoadFracs(TString filename) {
     return fracs;
 }
 
+vector<Double_t> CalcMeans(THStack* stack) {
+    vector<Double_t> means;
+    TList* hists = stack->GetHists();
+    TIter next(hists);
+    TH1* x_j;
+    while ((x_j = (TH1*)next())) {
+        means.push_back(x_j->GetMean());
+    }
+    return means;
+}

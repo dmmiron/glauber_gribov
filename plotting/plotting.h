@@ -4,6 +4,6 @@
 #include <TH1.h>
 #include <THStack.h>
 
-void plotTHStack(THStack *hists);
+void plotTHStack(THStack *hists, TString xtitle="", TString ytitle="");
 
 #endif

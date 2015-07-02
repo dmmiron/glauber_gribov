@@ -4,4 +4,9 @@
 read_ntuple.C
 *swp
 *Pb_Pb
-!*/dijet/sampled/*.root
+!*Sampled*.root
+*.d
+*.so
+*.pdf
+*.odp
+*.pcm

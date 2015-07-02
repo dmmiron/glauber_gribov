@@ -9,7 +9,7 @@
 #include <TLegend.h>
 #include <TStyle.h>
 
-void plotTHStack(THStack *hists) {
+void plotTHStack(THStack *hists, TString xtitle, TString ytitle) {
     TCanvas *canvas = new TCanvas();
 
     TList *hist_l = hists->GetHists();
@@ -24,9 +24,20 @@ void plotTHStack(THStack *hists) {
         hist->SetLineWidth(2);
         color++;
     }
-    TAxis *Xaxis = hists->GetXaxis();
-    TAxis *Yaxis = hists->GetYaxis();
+    hists->Draw("nostack");
+    TAxis *Xaxis = hists->GetHistogram()->GetXaxis();
+    Xaxis->SetTitle(xtitle);
+    TAxis *Yaxis = hists->GetHistogram()->GetYaxis();
+    Yaxis->SetTitle(ytitle);
     hists->Draw("nostack");
     legend->Draw("");
 }
+
+void MakePlots(vector<THStack*> stacks, TString xtitle, TString ytitle) {
+    vector<THStack*>::iterator iter;
+    for (iter = stacks.begin(); iter != stacks.end(); iter++) {
+        plotTHStack(*iter, xtitle, ytitle);
+    }
+}
+
 
