@@ -30,6 +30,7 @@ const Int_t FLAVORS [4] = {QUARK_QUARK, QUARK_GLUON, GLUON_QUARK, GLUON_GLUON};
 
 const Double_t JET_MEAN_LOSS = 18.69; //GeV calculated mean energy loss of jets from b0 collision
 
+using namespace std;
 
 class Nucleus 
 {

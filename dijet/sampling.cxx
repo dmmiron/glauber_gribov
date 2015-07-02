@@ -15,6 +15,7 @@ void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const 
     Collision coll = Collision(6.62, .546, b);
     if (pairs) {
         name = TString::Format("%s/SampledJetsPairs_alpha%.2f_%uk_b%.1f_theta%.1f.root", dir_path, alpha, n / 1000, b, theta); 
+        cout << name << endl;
         f = TFile::Open(name, "recreate");
         TH2* jets = coll.SampleJetsPaired(n, alpha, theta, xmin, ymin, xmax, ymax);
         jets->Write(); 
@@ -29,7 +30,18 @@ void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const 
     f->Close();
 }
 
-
+void SweepJets(Int_t n, Double_t alpha, Double_t bmin, Double_t bmax, Double_t bstep, Double_t theta_min, Double_t theta_max, Double_t theta_step, TString base_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    Double_t b = bmin;
+    Double_t theta = theta_min;
+    while (b < bmax) {
+        theta = theta_min;
+        while (theta < theta_max) {
+            MakeAndSaveJets(n, alpha, b, theta, base_path, pairs, xmin, ymin, xmax, ymax);
+            theta += theta_step;
+        }
+        b += bstep;
+    }
+}
 
 TH1* LoadJets(TString filename) {
     TFile *f = TFile::Open(filename);

@@ -249,7 +249,7 @@ TH1* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     for (int i = 0; i < n; i++) {
         h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax).first);
-        if (i % 1000 == 0) {
+        if (i % 500 == 0) {
             cout << i << " jets sampled" << endl;
         }
         //cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
@@ -267,6 +267,9 @@ TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double
     for (int i = 0; i < n; i++) {
         jets = SampleJetPair(alpha, theta, xmin, ymin, xmax, ymax);
         h->Fill(jets.first, jets.second);
+        if (i % 500 == 0) {
+            cout << i << " jet pairs sampled" << endl;
+        }
     }
     return h;
 }
