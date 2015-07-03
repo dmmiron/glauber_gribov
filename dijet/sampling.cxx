@@ -1,13 +1,46 @@
 #include "sampling.h"
 #include "density.h"
 
-#include <cstdlib>
 #include <TSystemDirectory.h>
 #include <TSystemFile.h>
 #include <TRegexp.h>
 #include <TKey.h>
+#include <TObjString.h>
 
-using namespace std;
+TH1* LoadJets(TString filename) {
+    TFile *f = TFile::Open(filename);
+    TList *l = f->GetListOfKeys();
+    TString name = l->First()->GetName();
+    TH1* jets = (TH1*)f->Get(name);
+    return jets;
+}
+
+TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
+    TFile* f = TFile::Open("initial/total.root");
+    TString name;
+    if (flavor1 == ALL || flavor2 == ALL) {
+        name = TString("h3_pt1_pt2_dphi_All");
+    } 
+    else { 
+        TString flavors = FlavorToString(flavor1, flavor2);
+        flavors.ToUpper();
+        name = TString("h3_pt1_pt2_dphi_") + flavors;
+    }
+    cout << name << endl;
+    TH3* init = (TH3*)f->Get(name);
+    return (TH2*)init->Project3D("yx");
+}
+
+vector<TH1*> LoadFracs(TString filename) {
+    vector<TH1*> fracs;
+    TFile* f = TFile::Open(filename);
+    TIter nextkey(f->GetListOfKeys());
+    TKey *key;
+    while ((key = (TKey*)nextkey())) {
+        fracs.push_back((TH1*)key->ReadObj());
+    }
+    return fracs;
+}
 
 void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const char* dir_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TString name;
@@ -43,13 +76,6 @@ void SweepJets(Int_t n, Double_t alpha, Double_t bmin, Double_t bmax, Double_t b
     }
 }
 
-TH1* LoadJets(TString filename) {
-    TFile *f = TFile::Open(filename);
-    TList *l = f->GetListOfKeys();
-    TString name = l->First()->GetName();
-    TH1* jets = (TH1*)f->Get(name);
-    return jets;
-}
 void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDeltaE, Double_t endDeltaE, Double_t stepE, Double_t b, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     TFile* f = TFile::Open(outfile, "recreate");
     Collision coll = Collision(6.62, .546, b);
@@ -82,13 +108,46 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
     f->Close();
 }
 
-
+Double_t CalcAsymmetry(Double_t jet1, Double_t jet2, Bool_t x_j) {
+    if (x_j) {
+        if (jet1 == 0 && jet2 ==0) {
+            return 1;
+        }
+        else if (jet1 == 0 || jet2 == 0) {
+            return 0;
+        }
+        if (jet1 > 0 && jet2 > 0) {
+            if (jet1 > jet2) {
+                return jet2/jet1;
+            }
+            else {
+                return jet1/jet2;
+            }
+        }
+        else {
+            if (jet1 > -jet2) {
+                return jet2/jet1;
+            }
+            else {
+                return jet1/jet2;
+            } 
+        }
+    } 
+    else {
+        if (jet1 == 0 && jet2 ==0) {
+            return 0;
+        }
+        if (jet1 > jet2) {
+            return (jet1-jet2)/(jet1+jet2);
+        }
+        else {
+            return (jet2-jet1)/(jet1+jet2);
+        }
+    }
+}
 
 TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
-    Double_t jetLoss1;
-    Double_t jetLoss2;
-    Double_t jet1;
-    Double_t jet2;
+    Double_t jetLoss1, jetLoss2, jet1, jet2;
     TH2* subleading = new TH2F("Subleading ratio", "Subleading ratio", 100, 0, 1, maxPt, 0, maxPt);
 
     Collision* coll = new Collision(6.62, .546, 5);
@@ -99,6 +158,7 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_
     Double_t startPt = minPt;
     Double_t unquenchedJet;
     Double_t asymmetry;
+
     normalization /= JET_MEAN_LOSS;
 
     temp = new TH2F("AsymmetryTemp", "AsymmetryTemp", 100, 0, 1, maxPt, 0, maxPt);
@@ -116,6 +176,9 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_
             }
             jet1 = unquenchedJet-normalization*jetLoss1;
             jet2 = unquenchedJet-normalization*jetLoss2;
+            asymmetry = CalcAsymmetry(jet1, jet2, x_j);
+            count++;
+            /*
             if ((jet1 >= 0) && (jet2 >= 0)) {
                 if (jet1 > jet2) {
                     if (x_j) {
@@ -137,6 +200,7 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_
                 }
                 count++;
             }
+            */
         }
         count = 0;
         subleading->Add(temp, scale);
@@ -147,9 +211,9 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_
     return subleading;
 }
 
+//Not really used
 TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
-    Double_t jet1;
-    Double_t jet2;
+    Double_t jet1, jet2;
     TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
 
     Double_t A_j;
@@ -165,6 +229,276 @@ TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
         subleading->Fill(A_j);
     }
     return subleading;
+}
+
+TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
+    TH2* initial = (TH2*)initial_in->Clone();
+    TAxis* pt1 = initial->GetXaxis();
+    Int_t binlow = pt1->FindBin(minPt);
+    Int_t binhigh = pt1->FindBin(maxPt);
+    ClearBins(initial, -1, binlow, -1, -1);
+    ClearBins(initial, binhigh+1, -1, -1, -1);
+    pt1->SetRange(binlow, binhigh);
+
+    Double_t jet1, jet2, loss1, loss2, out1, out2; 
+
+    normalization /= JET_MEAN_LOSS;
+    Double_t coef1=normalization, coef2=normalization; 
+
+    TString name = FlavorToString(flavor1, flavor2);
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* x_j = new TH1F(name, title, 200, -1, 1);
+    SetAxes(x_j, "x_j");
+     
+    if (flavor1 == GLUON) {
+        coef1 = normalization*GLUON_RATIO;
+    }
+    if (flavor2 == GLUON) {
+        coef2 = normalization*GLUON_RATIO;
+    }
+    Int_t count = 0;
+    while (count < n_samples) {
+        initial->GetRandom2(jet1, jet2);
+        loss->GetRandom2(loss1, loss2);
+        out1 = jet1-coef1*loss1;
+        out2 = jet2-coef2*loss2;
+        /* FOR DEBUGGING
+        if (count % 1000 == 0) {
+            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
+            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
+        }
+        */
+        x_j->Fill(CalcAsymmetry(out1, out2));
+        /*
+        if (out1 >= 0 && out2 >= 0) {
+            if (out1 > out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (out2 > out1) {
+                x_j->Fill(out1/out2);
+            }
+        }
+        else {
+            if (out1 > -out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (-out2 > out1) {
+                x_j->Fill(out1/out2);
+            } 
+        }
+        */
+        count++;
+    }
+    return x_j;
+}
+
+TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+    vector<TH2*> initialJets = vector<TH2*>();
+    TH2* initial;
+    TH2* temp;
+    TH1* pt1_all;
+    TH1* pt2;
+    TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
+    Int_t binlow, binhigh;
+    for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
+        temp = *it;
+        initial = (TH2*)temp->Clone();
+        pt1_axis = initial->GetXaxis();
+        binlow = pt1_axis->FindBin(minPt);
+        binhigh = pt1_axis->FindBin(maxPt);
+        //FIX THE 1000 LIMIT
+        ClearBins(initial, -1, binlow, -1, -1);
+        ClearBins(initial, binhigh+1, -1, -1, -1);
+        pt1_axis->SetRange(binlow, binhigh);
+        initialJets.push_back(initial);
+    }
+    initial = initialJets[initialJets.size()-1];
+    pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
+    Double_t jet1, jet2, loss1, loss2, out1, out2; 
+
+    normalization /= JET_MEAN_LOSS;
+    Double_t coef1=normalization, coef2=normalization; 
+
+    TString name = "combined";
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* x_j = new TH1F(name, title, 200, -1, 1);
+    SetAxes(x_j, "x_j");
+    Int_t count = 0;
+    Int_t bin;
+    Int_t flavor_pair;
+    while (count < n_samples) {
+        jet1 = pt1_all->GetRandom();
+        bin = pt1_axis->FindBin(jet1);
+        flavor_pair = GetFlavorPair(bin, fracs);
+        pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
+        jet2 = pt2->GetRandom();
+        if (flavor_pair == GLUON_QUARK) {
+            coef1 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == QUARK_GLUON) {
+            coef2 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == GLUON_GLUON) { 
+            coef1 = normalization*GLUON_RATIO;
+            coef2 = normalization*GLUON_RATIO;
+        }
+        loss->GetRandom2(loss1, loss2);
+        out1 = jet1-coef1*loss1;
+        out2 = jet2-coef2*loss2;
+        /* FOR DEBUGGING
+        if (count % 1000 == 0) {
+            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
+            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
+        }
+        */
+        x_j->Fill(CalcAsymmetry(out1, out2));
+        /*
+        if (out1 >= 0 && out2 >= 0) {
+            if (out1 > out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (out2 > out1) {
+                x_j->Fill(out1/out2);
+            }
+        }
+        else {
+            if (out1 > -out2) {
+                x_j->Fill(out2/out1);
+            }
+            else if (-out2 > out1) {
+                x_j->Fill(out1/out2);
+            } 
+        }
+        */
+        count++;
+    }
+    return x_j;
+}
+
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta, Double_t minPt, Double_t maxPt, Bool_t combined) {
+    TH2* loss = (TH2*)LoadJets(lossFile);
+    TH2* initial;
+    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, theta=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, theta, minPt, maxPt));
+    vector<TH2*> initialJets = vector<TH2*>();
+    //loop through quark, gluon combinations
+    for (Int_t i = 0; i<2; i++) {
+        for (Int_t j = 0; j<2; j++) {
+            initial = LoadPYTHIA(i, j);
+            initialJets.push_back(initial);
+            stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, i, j, minPt, maxPt));
+        }
+    }
+    if (combined) {
+        vector<TH1*> fracs = LoadFracs("fractions.root");
+        initial = LoadPYTHIA(ALL, ALL);
+        initialJets.push_back(initial);
+        stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, nsamples, normalization, fracs, minPt, maxPt));
+    }
+    return stack;
+}
+
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
+    TList* files = GetFiles(dirname);
+    files->Sort();
+    THStack* hists;
+    vector<THStack*> stacks;
+    Double_t b;
+    Double_t theta;
+    if (files) {
+        TSystemFile *file;
+        TIter next(files);
+        TString fname;
+        while ((file=(TSystemFile*)next())) {
+            fname = dirname + file->GetName();
+            b = Parseb(fname); 
+            theta = ParseTheta(fname);
+            if (!file->IsDirectory()) {
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, theta, fracs, minPt, maxPt));
+            }
+        }
+    }
+    return stacks;
+}
+
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
+    TList* files = GetFiles(dirname);
+    files->Sort();
+    THStack* hists;
+    vector<THStack*> stacks;
+    Double_t b;
+    Double_t theta;
+    if (files) {
+        TSystemFile *file;
+        TIter next(files);
+        TString fname;
+        while ((file=(TSystemFile*)next())) {
+            fname = dirname + file->GetName();
+            b = Parseb(fname); 
+            theta = ParseTheta(fname);
+            if (!file->IsDirectory()) {
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, theta, minPt, maxPt));
+            }
+        }
+    }
+    return stacks;
+}
+
+TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
+    TList* files = GetFiles(dirname);
+    files->Sort();
+    THStack* hists;
+    //map<pair<Double_t, Double_t>, THStack*> stacks;
+    TMap* stacks = new TMap();
+    //pair<Double_t, Double_t> key;
+    TObjString* key;
+    Double_t b;
+    Double_t theta;
+    if (files) {
+        TSystemFile *file;
+        TIter next(files);
+        TString fname;
+        while ((file=(TSystemFile*)next())) {
+            fname = dirname + file->GetName();
+            b = Parseb(fname); 
+            theta = ParseTheta(fname);
+            if (!file->IsDirectory()) {
+                key = new TObjString(TString::Format("b%.1f, theta%.1f", b, theta));
+                hists = FlavorsPlusCombined(fname, nsamples, b, normalization, theta, minPt, maxPt); 
+                stacks->Add((TObject*)key, hists); 
+            }
+        }
+    }
+    return stacks;
+}
+
+//Fix fraction
+//should be given set of three?
+TH1* Combine(THStack *plots, vector<Double_t> fracs) {
+    TH1* combined;
+    TIter next(plots->GetHists());
+    combined = (TH1*)next()->Clone();
+    combined->SetName("Combined");
+    combined->SetTitle("combined");
+    vector<Double_t>::iterator it = fracs.begin();
+    combined->Scale(*it);
+    it++;
+    while (TH1* hist = (TH1*)next()) {
+        combined->Add(hist, *it);
+        it++;
+    }
+    return combined;
+}
+
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, theta, minPt, maxPt, false);
+    TH1* combined = Combine(hists, fracs);
+    hists->Add(combined);
+    return hists;
+}
+
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, theta, minPt, maxPt, true);
+    return hists;
 }
 
 Double_t CentralityBin(Double_t endFrac) {
@@ -189,10 +523,10 @@ TH1* HistDiff(TH2* h) {
 
 void ClearBins(TH2* hist, Int_t lowx, Int_t highx, Int_t lowy, Int_t highy) {
     if (highx < 0) {
-        highx = hist->GetNbinsX();
+        highx = hist->GetNbinsX()+1; //include overflow bin
     }
     if (highy < 0) {
-        highy = hist->GetNbinsY();
+        highy = hist->GetNbinsY()+1;
     }
     for (Int_t binx = lowx; binx < highx; binx++) {
         for (Int_t biny = lowy; biny < highy; biny++) {
@@ -236,67 +570,6 @@ TString FlavorToString(Int_t flavor1, Int_t flavor2)
     }
 }
 
-TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
-    TH2* initial = (TH2*)initial_in->Clone();
-    TAxis* pt1 = initial->GetXaxis();
-    Int_t binlow = pt1->FindBin(minPt);
-    Int_t binhigh = pt1->FindBin(maxPt);
-    ClearBins(initial, 0, binlow, 0, 1000);
-    ClearBins(initial, binhigh+1, 1000, 0, 1000);
-    pt1->SetRange(binlow, binhigh);
-    Double_t jet1; 
-    Double_t jet2;
-    Double_t loss1;
-    Double_t loss2;
-    normalization /= JET_MEAN_LOSS;
-    Double_t coef1=normalization; 
-    Double_t coef2=normalization;
-    Double_t out1;
-    Double_t out2;
-    TString name = FlavorToString(flavor1, flavor2);
-    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-    TH1* x_j = new TH1F(name, title, 200, -1, 1);
-    SetAxes(x_j, "x_j");
-     
-    if (flavor1 == GLUON) {
-        coef1 = normalization*GLUON_RATIO;
-    }
-    if (flavor2 == GLUON) {
-        coef2 = normalization*GLUON_RATIO;
-    }
-    Int_t count = 0;
-    while (count < n_samples) {
-        initial->GetRandom2(jet1, jet2);
-        loss->GetRandom2(loss1, loss2);
-        out1 = jet1-coef1*loss1;
-        out2 = jet2-coef2*loss2;
-        /* FOR DEBUGGING
-        if (count % 1000 == 0) {
-            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
-            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
-        }
-        */
-        if (out1 >= 0 && out2 >= 0) {
-            if (out1 > out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (out2 > out1) {
-                x_j->Fill(out1/out2);
-            }
-        }
-        else {
-            if (out1 > -out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (-out2 > out1) {
-                x_j->Fill(out1/out2);
-            } 
-        }
-        count++;
-    }
-    return x_j;
-}
-
 Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs) {
     //sample from histogram where [0-1) = QQ, [1-2) = QG, [2-3) = GQ, [3-4) = GG
     TH1* flavors = new TH1F("flavors", "fracs", 4, 0, 4);
@@ -308,204 +581,9 @@ Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs) {
     return flavor;
 }
 
-TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
-    vector<TH2*> initialJets = vector<TH2*>();
-    TH2* initial;
-    TH2* temp;
-    TH1* pt1_all;
-    TH1* pt2;
-    TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
-    Int_t binlow, binhigh;
-    for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
-        temp = *it;
-        initial = (TH2*)temp->Clone();
-        pt1_axis = initial->GetXaxis();
-        binlow = pt1_axis->FindBin(minPt);
-        binhigh = pt1_axis->FindBin(maxPt);
-        //FIX THE 1000 LIMIT
-        ClearBins(initial, 0, binlow, 0, 1000);
-        ClearBins(initial, binhigh+1, 1000, 0, 1000);
-        pt1_axis->SetRange(binlow, binhigh);
-        initialJets.push_back(initial);
-    }
-    initial = initialJets[initialJets.size()-1];
-    pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
-    Double_t jet1, jet2; 
-    Double_t loss1, loss2;
-    normalization /= JET_MEAN_LOSS;
-    Double_t coef1=normalization, coef2=normalization; 
-    Double_t out1, out2;
-    TString name = "combined";
-    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-    TH1* x_j = new TH1F(name, title, 200, -1, 1);
-    SetAxes(x_j, "x_j");
-    Int_t count = 0;
-    Int_t bin;
-    Int_t flavor_pair;
-    while (count < n_samples) {
-        jet1 = pt1_all->GetRandom();
-        bin = pt1_axis->FindBin(jet1);
-        flavor_pair = GetFlavorPair(bin, fracs);
-        pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
-        jet2 = pt2->GetRandom();
-        if (flavor_pair == GLUON_QUARK) {
-            coef1 = normalization*GLUON_RATIO;
-        }
-        else if (flavor_pair == QUARK_GLUON) {
-            coef2 = normalization*GLUON_RATIO;
-        }
-        else if (flavor_pair == GLUON_GLUON) { 
-            coef1 = normalization*GLUON_RATIO;
-            coef2 = normalization*GLUON_RATIO;
-        }
-        loss->GetRandom2(loss1, loss2);
-        out1 = jet1-coef1*loss1;
-        out2 = jet2-coef2*loss2;
-        /* FOR DEBUGGING
-        if (count % 1000 == 0) {
-            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
-            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
-        }
-        */
-        if (out1 >= 0 && out2 >= 0) {
-            if (out1 > out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (out2 > out1) {
-                x_j->Fill(out1/out2);
-            }
-        }
-        else {
-            if (out1 > -out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (-out2 > out1) {
-                x_j->Fill(out1/out2);
-            } 
-        }
-        count++;
-    }
-    return x_j;
-}
-
-
-TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
-    TFile* f = TFile::Open("initial/total.root");
-    TString name;
-    if (flavor1 == ALL || flavor2 == ALL) {
-        name = TString("h3_pt1_pt2_dphi_All");
-    } 
-    else { 
-        TString flavors = FlavorToString(flavor1, flavor2);
-        flavors.ToUpper();
-        name = TString("h3_pt1_pt2_dphi_") + flavors;
-    }
-    cout << name << endl;
-    TH3* init = (TH3*)f->Get(name);
-    return (TH2*)init->Project3D("yx");
-}
-
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt, Bool_t combined) {
-    TH2* loss = (TH2*)LoadJets(lossFile);
-    TH2* initial;
-    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, minPt=%.1f, maxPt=%.1f)", b, normalization, minPt, maxPt));
-    vector<TH2*> initialJets = vector<TH2*>();
-    //loop through quark, gluon combinations
-    for (Int_t i = 0; i<2; i++) {
-        for (Int_t j = 0; j<2; j++) {
-            initial = LoadPYTHIA(i, j);
-            initialJets.push_back(initial);
-            stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, i, j, minPt, maxPt));
-        }
-    }
-    if (combined) {
-        vector<TH1*> fracs = LoadFracs("fractions.root");
-        initial = LoadPYTHIA(ALL, ALL);
-        initialJets.push_back(initial);
-        stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, nsamples, normalization, fracs, minPt, maxPt));
-    }
-    return stack;
-}
-
-//Fix fraction
-//should be given set of three?
-TH1* Combine(THStack *plots, vector<Double_t> fracs) {
-    TH1* combined;
-    TIter next(plots->GetHists());
-    combined = (TH1*)next()->Clone();
-    combined->SetName("Combined");
-    combined->SetTitle("combined");
-    vector<Double_t>::iterator it = fracs.begin();
-    combined->Scale(*it);
-    it++;
-    while (TH1* hist = (TH1*)next()) {
-        combined->Add(hist, *it);
-        it++;
-    }
-    return combined;
-}
-
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt, false);
-    TH1* combined = Combine(hists, fracs);
-    hists->Add(combined);
-    return hists;
-}
-
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, minPt, maxPt, true);
-    return hists;
-}
-
 TList* GetFiles(TString dirname) {
     TSystemDirectory dir(dirname, dirname);
     return dir.GetListOfFiles();
-}
-
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
-    TList* files = GetFiles(dirname);
-    files->Sort();
-    THStack* hists;
-    vector<THStack*> stacks;
-    Double_t b;
-    TRegexp regex = TRegexp("b[0-9]*");
-    if (files) {
-        TSystemFile *file;
-        TIter next(files);
-        TString fname;
-        while ((file=(TSystemFile*)next())) {
-            fname = dirname + file->GetName();
-            TString sub(fname(regex));
-            b = TString(sub(1, sub.Length())).Atof();
-            if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, fracs, minPt, maxPt));
-            }
-        }
-    }
-    return stacks;
-}
-
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
-    TList* files = GetFiles(dirname);
-    files->Sort();
-    THStack* hists;
-    vector<THStack*> stacks;
-    Double_t b;
-    TRegexp regex = TRegexp("b[0-9]*");
-    if (files) {
-        TSystemFile *file;
-        TIter next(files);
-        TString fname;
-        while ((file=(TSystemFile*)next())) {
-            fname = dirname + file->GetName();
-            TString sub(fname(regex));
-            b = TString(sub(1, sub.Length())).Atof();
-            if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, minPt, maxPt));
-            }
-        }
-    }
-    return stacks;
 }
 void SetAxes(TH1* hist, TString xtitle) {
     TAxis* axis = hist->GetXaxis();
@@ -528,17 +606,6 @@ void SetAxes(TH3* hist, TString xtitle, TString ytitle, TString ztitle) {
     axis->SetTitle(ztitle);
 }
 
-vector<TH1*> LoadFracs(TString filename) {
-    vector<TH1*> fracs;
-    TFile* f = TFile::Open(filename);
-    TIter nextkey(f->GetListOfKeys());
-    TKey *key;
-    while ((key = (TKey*)nextkey())) {
-        fracs.push_back((TH1*)key->ReadObj());
-    }
-    return fracs;
-}
-
 vector<Double_t> CalcMeans(THStack* stack) {
     vector<Double_t> means;
     TList* hists = stack->GetHists();
@@ -549,3 +616,35 @@ vector<Double_t> CalcMeans(THStack* stack) {
     }
     return means;
 }
+
+Double_t Parseb(TString s) {
+    TRegexp regex = TRegexp("b[0-9]*");
+    TString sub(s(regex));
+    Double_t b = TString(sub(1, sub.Length())).Atof();
+    return b;
+}
+
+Double_t ParseTheta(TString s) {
+    TRegexp regex = TRegexp("theta[0-9]*");
+    TString sub(s(regex));
+    Double_t theta = TString(sub(5, sub.Length())).Atof();
+    return theta;
+}
+//want b, theta, mean x_j_s
+TNtuple* CalcMeansTuple(TMap* asymmap) {
+    TIterator* iter = asymmap->MakeIterator();
+    TNtuple* out = new TNtuple("means", "x_j", "b:theta:qq:qg:gq:gg:combined");
+    TObject* key;
+    THStack* stack;
+    Double_t b, theta;
+    vector<Double_t> means;
+    while ((key = iter->Next())) {
+        b = Parseb(key->GetName());
+        theta = ParseTheta(key->GetName());
+        stack = (THStack*)asymmap->GetValue(key);
+        means = CalcMeans(stack);
+        out->Fill(b, theta, means[0], means[1], means[2], means[3], means[4]);
+    }
+    return out;
+}
+
