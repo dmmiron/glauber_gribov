@@ -462,7 +462,7 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Doubl
             b = Parseb(fname); 
             theta = ParseTheta(fname);
             if (!file->IsDirectory()) {
-                key = new TObjString(TString::Format("b%.1f, theta%.1f", b, theta));
+                key = new TObjString(TString::Format("b%.1f_theta%.1f", b, theta));
                 hists = FlavorsPlusCombined(fname, nsamples, b, normalization, theta, minPt, maxPt); 
                 stacks->Add((TObject*)key, hists); 
             }
@@ -647,4 +647,3 @@ TNtuple* CalcMeansTuple(TMap* asymmap) {
     }
     return out;
 }
-
