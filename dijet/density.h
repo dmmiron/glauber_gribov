@@ -81,7 +81,7 @@ class Collision {
         TF2*        CalcRhoJet();
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
-        Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t theta=0);
+        Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
 
     public:
         Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
@@ -97,14 +97,14 @@ class Collision {
         TF1*        GetPScatB()     const {return fPScatB;}
         TF2*        GetPPart()      const {return fPPart;}
         TF2*        GetRhoJet()     const {return fRhoJet;}
-        TF1*        CalcJetIntegrand(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t theta=0);
-        //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t theta);
-        TF1*        JetOfTheta(Double_t alpha=0, Double_t x0=0, Double_t y0=0); 
+        TF1*        CalcJetIntegrand(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
+        //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t phi);
+        TF1*        JetOfPhi(Double_t alpha=0, Double_t x0=0, Double_t y0=0); 
         TH1*        SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=10, Double_t xmax=10, Double_t ymax=10); 
-        TH2*       SampleJetsTheta(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10); 
-        TH2*       SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        TH2*       SampleJetsPhi(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10); 
+        TH2*       SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
         pair<Double_t, Double_t> SampleJet(Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
-        pair<Double_t, Double_t> SampleJetPair(Double_t alpha=0, Double_t theta=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        pair<Double_t, Double_t> SampleJetPair(Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
 
         TH1*        Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
         TF1*        UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
@@ -197,24 +197,24 @@ struct EvalFunc {
 
 struct JetIntegrand {
     JetIntegrand(TF2 *f): fFunc(f) {}
-    //4 parameters, alpha, theta, x_0, y_0
+    //4 parameters, alpha, phi, x_0, y_0
     //takes a two d density function
     Double_t operator() (Double_t *x, Double_t *par) const {
         Double_t alpha = par[0];
         Double_t x0    = par[1];
         Double_t y0    = par[2];
-        Double_t theta = par[3];
-        theta = theta*TMath::Pi()/180.0;
+        Double_t phi = par[3];
+        phi = phi*TMath::Pi()/180.0;
         Double_t l = x[0];
         //IN RADIANS
-        Double_t cosTheta = TMath::Cos(theta);
-        Double_t sinTheta = TMath::Sin(theta);
-        Double_t xx = l*cosTheta + x0;
-        Double_t yy = l*sinTheta + y0;
+        Double_t cosPhi = TMath::Cos(phi);
+        Double_t sinPhi = TMath::Sin(phi);
+        Double_t xx = l*cosPhi + x0;
+        Double_t yy = l*sinPhi + y0;
         //l squared
         //Double_t l2 = (xx-x0)*(xx-x0)+(yy-y0)*(yy-y0);
         Double_t lAlpha = TMath::Power(l, alpha);
-        //cout << TMath::Abs(TMath::Cos(theta)) << endl;
+        //cout << TMath::Abs(TMath::Cos(phi)) << endl;
         return (fFunc->Eval(xx, yy))*lAlpha;
     }
     TF2 *fFunc;
@@ -226,8 +226,8 @@ struct CalcJet {
         Double_t alpha = par[0];
         Double_t x0 = par[1]; 
         Double_t y0 = par[2];
-        Double_t theta = x[0];
-        fFunc->SetParameters(alpha, x0, y0, theta);
+        Double_t phi = x[0];
+        fFunc->SetParameters(alpha, x0, y0, phi);
         return fFunc->Integral(0, INFTY, EPSILON);
     }
     TF1* fFunc;

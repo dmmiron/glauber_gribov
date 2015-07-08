@@ -42,15 +42,15 @@ vector<TH1*> LoadFracs(TString filename) {
     return fracs;
 }
 
-void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const char* dir_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t phi, const char* dir_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     TString name;
     TFile *f;
     Collision coll = Collision(6.62, .546, b);
     if (pairs) {
-        name = TString::Format("%s/SampledJetsPairs_alpha%.2f_%uk_b%.1f_theta%.1f.root", dir_path, alpha, n / 1000, b, theta); 
+        name = TString::Format("%s/SampledJetsPairs_alpha%.2f_%uk_b%.1f_phi%.1f.root", dir_path, alpha, n / 1000, b, phi); 
         cout << name << endl;
         f = TFile::Open(name, "recreate");
-        TH2* jets = coll.SampleJetsPaired(n, alpha, theta, xmin, ymin, xmax, ymax);
+        TH2* jets = coll.SampleJetsPaired(n, alpha, phi, xmin, ymin, xmax, ymax);
         jets->Write(); 
     }
     else {
@@ -63,14 +63,14 @@ void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t theta, const 
     f->Close();
 }
 
-void SweepJets(Int_t n, Double_t alpha, Double_t bmin, Double_t bmax, Double_t bstep, Double_t theta_min, Double_t theta_max, Double_t theta_step, TString base_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+void SweepJets(Int_t n, Double_t alpha, Double_t bmin, Double_t bmax, Double_t bstep, Double_t phi_min, Double_t phi_max, Double_t phi_step, TString base_path, Bool_t pairs, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     Double_t b = bmin;
-    Double_t theta = theta_min;
+    Double_t phi = phi_min;
     while (b < bmax) {
-        theta = theta_min;
-        while (theta < theta_max) {
-            MakeAndSaveJets(n, alpha, b, theta, base_path, pairs, xmin, ymin, xmax, ymax);
-            theta += theta_step;
+        phi = phi_min;
+        while (phi < phi_max) {
+            MakeAndSaveJets(n, alpha, b, phi, base_path, pairs, xmin, ymin, xmax, ymax);
+            phi += phi_step;
         }
         b += bstep;
     }
@@ -375,10 +375,10 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_sample
     return x_j;
 }
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta, Double_t minPt, Double_t maxPt, Bool_t combined) {
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
-    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, theta=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, theta, minPt, maxPt));
+    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, phi, minPt, maxPt));
     vector<TH2*> initialJets = vector<TH2*>();
     //loop through quark, gluon combinations
     for (Int_t i = 0; i<2; i++) {
@@ -403,7 +403,7 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> frac
     THStack* hists;
     vector<THStack*> stacks;
     Double_t b;
-    Double_t theta;
+    Double_t phi;
     if (files) {
         TSystemFile *file;
         TIter next(files);
@@ -411,9 +411,9 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> frac
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
             b = Parseb(fname); 
-            theta = ParseTheta(fname);
+            phi = ParsePhi(fname);
             if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, theta, fracs, minPt, maxPt));
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, fracs, minPt, maxPt));
             }
         }
     }
@@ -426,7 +426,7 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
     THStack* hists;
     vector<THStack*> stacks;
     Double_t b;
-    Double_t theta;
+    Double_t phi;
     if (files) {
         TSystemFile *file;
         TIter next(files);
@@ -434,9 +434,9 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
             b = Parseb(fname); 
-            theta = ParseTheta(fname);
+            phi = ParsePhi(fname);
             if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, theta, minPt, maxPt));
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt));
             }
         }
     }
@@ -452,7 +452,7 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Doubl
     //pair<Double_t, Double_t> key;
     TObjString* key;
     Double_t b;
-    Double_t theta;
+    Double_t phi;
     if (files) {
         TSystemFile *file;
         TIter next(files);
@@ -460,10 +460,10 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Doubl
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
             b = Parseb(fname); 
-            theta = ParseTheta(fname);
+            phi = ParsePhi(fname);
             if (!file->IsDirectory()) {
-                key = new TObjString(TString::Format("b%.1f_theta%.1f", b, theta));
-                hists = FlavorsPlusCombined(fname, nsamples, b, normalization, theta, minPt, maxPt); 
+                key = new TObjString(TString::Format("b%.1f_phi%.1f", b, phi));
+                hists = FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt); 
                 stacks->Add((TObject*)key, hists); 
             }
         }
@@ -489,15 +489,15 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
     return combined;
 }
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, theta, minPt, maxPt, false);
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, phi, minPt, maxPt, false);
     TH1* combined = Combine(hists, fracs);
     hists->Add(combined);
     return hists;
 }
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t theta, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, theta, minPt, maxPt, true);
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, phi, minPt, maxPt, true);
     return hists;
 }
 
@@ -624,33 +624,33 @@ Double_t Parseb(TString s) {
     return b;
 }
 
-Double_t ParseTheta(TString s) {
-    TRegexp regex = TRegexp("theta[0-9]*");
+Double_t ParsePhi(TString s) {
+    TRegexp regex = TRegexp("phi[0-9]*");
     TString sub(s(regex));
-    Double_t theta = TString(sub(5, sub.Length())).Atof();
-    return theta;
+    Double_t phi = TString(sub(5, sub.Length())).Atof();
+    return phi;
 }
-//want b, theta, mean x_j_s
+//want b, phi, mean x_j_s
 TNtuple* CalcMeansTuple(TMap* asymmap) {
     TIterator* iter = asymmap->MakeIterator();
-    TNtuple* out = new TNtuple("means", "x_j", "b:theta:qq:qg:gq:gg:combined");
+    TNtuple* out = new TNtuple("means", "x_j", "b:phi:qq:qg:gq:gg:combined");
     TObject* key;
     THStack* stack;
-    Double_t b, theta;
+    Double_t b, phi;
     vector<Double_t> means;
     while ((key = iter->Next())) {
         b = Parseb(key->GetName());
-        theta = ParseTheta(key->GetName());
+        phi = ParsePhi(key->GetName());
         stack = (THStack*)asymmap->GetValue(key);
         means = CalcMeans(stack);
-        out->Fill(b, theta, means[0], means[1], means[2], means[3], means[4]);
+        out->Fill(b, phi, means[0], means[1], means[2], means[3], means[4]);
     }
     return out;
 }
 
 
-TString MakeKey(Double_t b, Double_t theta) {
-    return TString::Format("b%.1ftheta%.1f", b, theta);
+TString MakeKey(Double_t b, Double_t phi) {
+    return TString::Format("b%.1fphi%.1f", b, phi);
 }
 
 TMap* FixKeys(TMap* asymmap) {
@@ -659,17 +659,17 @@ TMap* FixKeys(TMap* asymmap) {
     TObject* key;
     TObjString* new_key;
     Double_t b;
-    Double_t theta;
+    Double_t phi;
     while ((key = iter->Next())) {
         b = Parseb(key->GetName());
-        theta = ParseTheta(key->GetName());
-        new_key = new TObjString(MakeKey(b, theta));
+        phi = ParsePhi(key->GetName());
+        new_key = new TObjString(MakeKey(b, phi));
         out->Add(new_key, (TH1*)asymmap->GetValue(key));
     }
     return out;
 }
 
-TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t theta, TString flavor) {
+TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t phi, TString flavor) {
     Double_t b = TMath::Ceil(CentralityBin(cent_min));
     Double_t max = TMath::Floor(CentralityBin(cent_max));
     Double_t scale;
@@ -682,7 +682,7 @@ TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t th
     }
     cout << b << " " << max << " " << scale << endl;
     TString name = TString::Format("x_j (%.1f-%.1f %% centrality)", cent_min, cent_max);
-    TString key = MakeKey(b, theta);
+    TString key = MakeKey(b, phi);
     cout << key << endl;
     THStack* stack = (THStack*)asymmap->GetValue(key);
     TH1* temp = (TH1*)stack->GetHists()->FindObject(flavor);
@@ -691,7 +691,7 @@ TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t th
     b++;
     while (b < max) {
         cout << b << endl;
-        key = MakeKey(b, theta);
+        key = MakeKey(b, phi);
         cout << key << endl;
         stack = (THStack*)asymmap->GetValue(key);
         temp = (TH1*)stack->GetHists()->FindObject(flavor);

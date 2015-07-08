@@ -143,37 +143,37 @@ TF2* Collision::CalcPPart() {
     return PPart;
 }
 
-TF1* Collision::CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t theta) {
+TF1* Collision::CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Double_t phi) {
     //convert degrees to radians
 
     JetIntegrand *jInt = new JetIntegrand(fPPart);
     //Temporary fix limit of integration at 100
     TF1* JetInt = new TF1("jInt", jInt, 0, INFTY, 4, "JetIntegrand"); 
-    JetInt->SetParameters(alpha, x0, y0, theta);
+    JetInt->SetParameters(alpha, x0, y0, phi);
     return JetInt;
 }
 /*
-Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t theta=0) {
-    TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, theta);
+Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t phi=0) {
+    TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, phi);
     return JetInt->Integral(0, INFTY);
 }
 */
 
-TF1* Collision::JetOfTheta(Double_t alpha, Double_t x0, Double_t y0) {
+TF1* Collision::JetOfPhi(Double_t alpha, Double_t x0, Double_t y0) {
     TF1* JetInt = CalcJetIntegrand(alpha, x0, y0, 0);
     CalcJet* jet = new CalcJet(JetInt);
-    TF1* JetTheta = new TF1("JetTheta", jet, 0, 360, 3, "CalcJet");
+    TF1* JetPhi = new TF1("JetPhi", jet, 0, 360, 3, "CalcJet");
     
-    JetTheta->SetParameters(alpha, x0, y0);
-    return JetTheta;
+    JetPhi->SetParameters(alpha, x0, y0);
+    return JetPhi;
 }
 
-Double_t Collision::JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double_t theta) {
+Double_t Collision::JetIntegral(Double_t alpha, Double_t x0, Double_t y0, Double_t phi) {
     //clock_t t;
-    TF1* JetTheta = JetOfTheta(alpha, x0, y0);
+    TF1* JetPhi = JetOfPhi(alpha, x0, y0);
     //t = clock();
-    Double_t out = JetTheta->Eval(theta);
-    //cout << "testing JetOFTheta: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    Double_t out = JetPhi->Eval(phi);
+    //cout << "testing JetOFPhi: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     return out;
 }
 
@@ -214,27 +214,27 @@ pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha, Double_t xmin, Dou
     TF1* uniform = new TF1("uniform", "1", 0, 360);
     //cout << "uniform: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     //ask about how we should generate this value since it's just uniform (do we want seed transparency?)
-    Double_t theta = uniform->GetRandom();
+    Double_t phi = uniform->GetRandom();
     //for testing
-    //theta = 45.0;
-    //cout << "theta: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
-    Double_t out = JetIntegral(alpha, x, y, theta);
+    //phi = 45.0;
+    //cout << "phi: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
+    Double_t out = JetIntegral(alpha, x, y, phi);
     //cout << "timing SampleJet Inside func: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl; 
-    return make_pair(out, theta);
+    return make_pair(out, phi);
 }
 
-//Convention is theta outside of range [0, 360) means choose uniformly
-pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+//Convention is phi outside of range [0, 360) means choose uniformly
+pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     Double_t x;
     Double_t y;
     fRhoJet->GetRandom2(x, y);
     //sample jets opposite directions
     TF1* uniform = new TF1("uniform", "1", 0, 360);
-    if (theta < 0 || theta >= 360) {
-        theta = uniform->GetRandom();
+    if (phi < 0 || phi >= 360) {
+        phi = uniform->GetRandom();
     }
-    Double_t jet1 = JetIntegral(alpha, x, y, theta);
-    Double_t jet2 = JetIntegral(alpha, x, y, theta+180);
+    Double_t jet1 = JetIntegral(alpha, x, y, phi);
+    Double_t jet2 = JetIntegral(alpha, x, y, phi+180);
     return make_pair(jet1, jet2);
 }
 
@@ -259,13 +259,13 @@ TH1* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin
     return h;
 }
 
-//theta outside of [0, 360] means uniform sampling
-TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
-    TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", theta), 100, 0, 50, 100, 0, 50);
+//phi outside of [0, 360] means uniform sampling
+TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", phi), 100, 0, 50, 100, 0, 50);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     pair<Double_t, Double_t> jets; 
     for (int i = 0; i < n; i++) {
-        jets = SampleJetPair(alpha, theta, xmin, ymin, xmax, ymax);
+        jets = SampleJetPair(alpha, phi, xmin, ymin, xmax, ymax);
         h->Fill(jets.first, jets.second);
         if (i % 500 == 0) {
             cout << i << " jet pairs sampled" << endl;
@@ -275,9 +275,9 @@ TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t theta, Double
 }
 
 
-TH2* Collision::SampleJetsTheta(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
-    //x value stores E, y value stores theta
-    TH2F* h = new TH2F("Jets_Theta_n", "Sampled Jets", 200, 0, 100, 360, 0, 360);
+TH2* Collision::SampleJetsPhi(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    //x value stores E, y value stores phi
+    TH2F* h = new TH2F("Jets_Phi_n", "Sampled Jets", 200, 0, 100, 360, 0, 360);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
     pair<Double_t, Double_t> result;
     for (int i = 0; i < n; i++) {
