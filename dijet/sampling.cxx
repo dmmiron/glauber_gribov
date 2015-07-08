@@ -627,9 +627,17 @@ Double_t Parseb(TString s) {
 Double_t ParsePhi(TString s) {
     TRegexp regex = TRegexp("phi[0-9]*");
     TString sub(s(regex));
-    Double_t phi = TString(sub(5, sub.Length())).Atof();
+    Double_t phi = TString(sub(3, sub.Length())).Atof();
     return phi;
 }
+
+Double_t ParseTheta(TString s) {
+    TRegexp regex = TRegexp("theta[0-9]*");
+    TString sub(s(regex));
+    Double_t theta = TString(sub(5, sub.Length())).Atof();
+    return theta;
+}
+
 //want b, phi, mean x_j_s
 TNtuple* CalcMeansTuple(TMap* asymmap) {
     TIterator* iter = asymmap->MakeIterator();
@@ -668,6 +676,23 @@ TMap* FixKeys(TMap* asymmap) {
     }
     return out;
 }
+
+TMap* FixKeysTheta(TMap* asymmap) {
+    TMap* out = new TMap();
+    TIterator* iter = asymmap->MakeIterator();
+    TObject* key;
+    TObjString* new_key;
+    Double_t b;
+    Double_t phi;
+    while ((key = iter->Next())) {
+        b = Parseb(key->GetName());
+        phi = ParseTheta(key->GetName());
+        new_key = new TObjString(MakeKey(b, phi));
+        out->Add(new_key, (TH1*)asymmap->GetValue(key));
+    }
+    return out;
+}
+
 
 TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t phi, TString flavor) {
     Double_t b = TMath::Ceil(CentralityBin(cent_min));
