@@ -507,6 +507,13 @@ Double_t CentralityBin(Double_t endFrac) {
     return TMath::Sqrt(b2);
 }
 
+//inverse of CentralityBin
+Double_t ImpactToBin(Double_t b) {
+    Double_t area = b*b*10*TMath::Pi();
+    Double_t endFrac = area/(1000*CROSS_SECTION);
+    return endFrac;
+}
+
 TH1* HistDiff(TH2* h) {
     Int_t nbinsx = h->GetNbinsX();
     Int_t nbinsy = h->GetNbinsY();
@@ -695,36 +702,37 @@ TMap* FixKeysTheta(TMap* asymmap) {
 
 
 TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t phi, TString flavor) {
-    Double_t b = TMath::Ceil(CentralityBin(cent_min));
+    Double_t min = TMath::Ceil(CentralityBin(cent_min));
     Double_t max = TMath::Floor(CentralityBin(cent_max));
-    Double_t scale;
+    Double_t b = min;
+    Double_t scale = 1.0;
     //catch divide by 0 case
+    /*
     if (max == b) {
         scale = 1.0;
     }
     else {
         scale = 1.0/(max-b);
     }
-    cout << b << " " << max << " " << scale << endl;
-    TString name = TString::Format("x_j (%.1f-%.1f %% centrality)", cent_min, cent_max);
+    */
+    TString name = TString::Format("x_j (%.1f-%.1f %% centrality)", 100*cent_min, 100*cent_max);
     TString key = MakeKey(b, phi);
-    cout << key << endl;
     THStack* stack = (THStack*)asymmap->GetValue(key);
     TH1* temp = (TH1*)stack->GetHists()->FindObject(flavor);
     TH1* avg = (TH1*)temp->Clone();
     avg->SetName(name);
     b++;
+    Double_t dA;
     while (b < max) {
-        cout << b << endl;
         key = MakeKey(b, phi);
-        cout << key << endl;
         stack = (THStack*)asymmap->GetValue(key);
         temp = (TH1*)stack->GetHists()->FindObject(flavor);
-        avg->Add(temp);
+        dA = ImpactToBin(b)-ImpactToBin(min);
+        scale = 1+dA;
+        avg->Add(temp, scale);
         b++;
     }
-    cout << "out of loop" << endl;
-    avg->Scale(scale);
-    cout << "before return" << endl;
+    //avg->Scale(scale);
     return avg;
 }
+

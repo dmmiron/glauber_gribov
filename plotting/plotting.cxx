@@ -10,6 +10,7 @@
 #include <TCanvas.h>
 #include <TLegend.h>
 #include <TStyle.h>
+#include <TKey.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName) {
     TCanvas *canvas = new TCanvas();
@@ -74,3 +75,31 @@ TString StripString(TString s, TString remove) {
     }
     return out;
 }
+
+void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
+    gROOT->SetBatch(kTRUE);
+    TCanvas* c;
+    TFile* f = TFile::Open(filename);
+    TList* keys = f->GetListOfKeys();
+    TKey* key;
+    TIter iter(keys);
+    TNtuple* means;
+    Double_t b;
+    TString varexp = flavor + ":phi";
+    TString cutexp;
+    TString savename;
+    while ((key = (TKey*)iter.Next())) {
+        means = (TNtuple*)f->Get(key->GetName());
+        for (Double_t b=0; b<15; b++) {
+            c = new TCanvas();
+            cutexp = TString::Format("b==%.1f", b);
+            means->Draw(varexp, cutexp, "COLZ");
+            savename = TString::Format("%s_%s_b=%.1f.pdf", means->GetName(), (const char*)flavor, b);
+            c->SaveAs(save_dir + "/" + savename);
+            c->Close();
+        }
+    }
+    gROOT->SetBatch(kFALSE);
+}
+
+
