@@ -647,3 +647,59 @@ TNtuple* CalcMeansTuple(TMap* asymmap) {
     }
     return out;
 }
+
+
+TString MakeKey(Double_t b, Double_t theta) {
+    return TString::Format("b%.1ftheta%.1f", b, theta);
+}
+
+TMap* FixKeys(TMap* asymmap) {
+    TMap* out = new TMap();
+    TIterator* iter = asymmap->MakeIterator();
+    TObject* key;
+    TObjString* new_key;
+    Double_t b;
+    Double_t theta;
+    while ((key = iter->Next())) {
+        b = Parseb(key->GetName());
+        theta = ParseTheta(key->GetName());
+        new_key = new TObjString(MakeKey(b, theta));
+        out->Add(new_key, (TH1*)asymmap->GetValue(key));
+    }
+    return out;
+}
+
+TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t theta, TString flavor) {
+    Double_t b = TMath::Ceil(CentralityBin(cent_min));
+    Double_t max = TMath::Floor(CentralityBin(cent_max));
+    Double_t scale;
+    //catch divide by 0 case
+    if (max == b) {
+        scale = 1.0;
+    }
+    else {
+        scale = 1.0/(max-b);
+    }
+    cout << b << " " << max << " " << scale << endl;
+    TString name = TString::Format("x_j (%.1f-%.1f %% centrality)", cent_min, cent_max);
+    TString key = MakeKey(b, theta);
+    cout << key << endl;
+    THStack* stack = (THStack*)asymmap->GetValue(key);
+    TH1* temp = (TH1*)stack->GetHists()->FindObject(flavor);
+    TH1* avg = (TH1*)temp->Clone();
+    avg->SetName(name);
+    b++;
+    while (b < max) {
+        cout << b << endl;
+        key = MakeKey(b, theta);
+        cout << key << endl;
+        stack = (THStack*)asymmap->GetValue(key);
+        temp = (TH1*)stack->GetHists()->FindObject(flavor);
+        avg->Add(temp);
+        b++;
+    }
+    cout << "out of loop" << endl;
+    avg->Scale(scale);
+    cout << "before return" << endl;
+    return avg;
+}

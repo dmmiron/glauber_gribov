@@ -76,5 +76,11 @@ vector<Double_t> CalcMeans(THStack* stack);
 
 TNtuple* CalcMeansTuple(TMap* asymmap);
 
+TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t theta, TString flavor="combined");
+
+TMap* FixKeys(TMap* asymmap);
+
+TString MakeKey(Double_t b, Double_t theta);
+
 #endif
 
