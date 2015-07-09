@@ -10,3 +10,8 @@ read_ntuple.C
 *.pdf
 *.odp
 *.pcm
+dijet/plots/
+dijet/presentations/
+dijet/sampled/*
+*Mathematica*
+*dmmiron*
