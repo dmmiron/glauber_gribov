@@ -108,6 +108,27 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
     f->Close();
 }
 
+void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
+    TList* files = GetFiles(sampled_dir);
+    TSystemFile* file;
+    TIter next(files);
+    TString fname;
+    TString outname;
+    Double_t b;
+    Double_t phi;
+    TH1* jets;
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            fname = file->GetName();
+            b = Parseb(fname);
+            phi = ParsePhi(fname);
+            outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
+            jets = ((TH2*)LoadJets(sampled_dir+"/"+fname))->ProjectionX();
+            MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
+        }
+    }
+}
+
 Double_t CalcAsymmetry(Double_t jet1, Double_t jet2, Bool_t x_j) {
     if (x_j) {
         if (jet1 == 0 && jet2 ==0) {
@@ -706,15 +727,7 @@ TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t ph
     Double_t max = TMath::Floor(CentralityBin(cent_max));
     Double_t b = min;
     Double_t scale = 1.0;
-    //catch divide by 0 case
-    /*
-    if (max == b) {
-        scale = 1.0;
-    }
-    else {
-        scale = 1.0/(max-b);
-    }
-    */
+    Double_t normalization = 1.0; //should not be 1. NEED TO UPDATE
     TString name = TString::Format("x_j (%.1f-%.1f %% centrality)", 100*cent_min, 100*cent_max);
     TString key = MakeKey(b, phi);
     THStack* stack = (THStack*)asymmap->GetValue(key);
@@ -732,7 +745,8 @@ TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t ph
         avg->Add(temp, scale);
         b++;
     }
-    //avg->Scale(scale);
+    //figure out proper normalization
+    avg->Scale(normalization);
     return avg;
 }
 

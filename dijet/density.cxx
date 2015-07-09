@@ -411,8 +411,11 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
 
     numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
+    cout << "before q_ratio" << endl;
     q_ratio->Divide(differenceQuark, unquenchedQuark);
+    cout << "before g_ratio" << endl;
     g_ratio->Divide(differenceGluon, unquenchedGluon);
+    cout << "before ratio" << endl;
     ratio->Divide(numerator, denominator);
     q_ratio->Write();
     g_ratio->Write();
@@ -432,7 +435,9 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
 //we chose to multiply the gluon distribution
 Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
     Int_t bins = quarks->GetNbinsX();
+    cout << bins << "quarks" << gluons->GetNbinsX() << " gluons" << endl;
     TH1F* ratio = new TH1F("ratio", "ratio", bins, 0, bins);
+    cout << "in gluonfracCOEF" << endl;
     ratio->Divide(quarks, gluons);
     //make sure we can pick a bin
     Int_t irefE = (int)round(refE);
