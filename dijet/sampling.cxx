@@ -750,3 +750,33 @@ TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t ph
     return avg;
 }
 
+TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t pt_step, Double_t deltaE, TString flavor) {
+    TList* files = GetFiles(dirname); 
+    TSystemFile* file;
+    TIter next(files); 
+    TString fname;
+    TFile* f;
+    TString key= TString::Format("%s_DE=%.2f", (const char*)flavor, deltaE);
+    TH1* spectrum;
+    TNtuple* out = new TNtuple("Single_Jet_RAA", key, "b:phi:pt:RAA");
+    Double_t pt;
+    Double_t b;
+    Double_t phi;
+    Int_t bin;
+    while ((file = (TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            fname = file->GetName();
+            f = TFile::Open(dirname + "/" + fname);
+            spectrum = (TH1*)f->Get(key);
+            b = Parseb(fname);
+            phi = ParsePhi(fname);
+            pt = minPt;
+            while (pt < maxPt) {
+                bin = spectrum->GetBin(pt);
+                out->Fill(b, phi, pt, spectrum->GetBinContent(bin));
+                pt += pt_step;
+            }
+        }
+    }
+    return out;
+}

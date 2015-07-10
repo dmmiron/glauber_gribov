@@ -13,4 +13,8 @@ void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, 
 
 TString StripString(TString s, TString remove);
 
+void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor);
+
+void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Double_t maxPt, Double_t pt_step);
+
 #endif
