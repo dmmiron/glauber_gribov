@@ -11,6 +11,7 @@
 #include <TLegend.h>
 #include <TStyle.h>
 #include <TKey.h>
+#include <TGraph.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName) {
     TCanvas *canvas = new TCanvas();
@@ -109,6 +110,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     }
     f = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
     fitResults->Write();
+    f->Close();
     gROOT->SetBatch(kFALSE);
 }
 
@@ -127,6 +129,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     TString histname;
     TString savename;
     TF1* fit;
+    TGraph* gr;
     while ((key = (TKey*)next())) {
         RAA = (TNtuple*)f->Get(key->GetName());
         DE = ParseParameter(key->GetName(), "DE=");
@@ -138,9 +141,12 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
-                //RAA->Draw(varexp, cutexp, "COLZ");
+                RAA->Draw(varexp, cutexp, "goff");
+
+                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA"); 
+                DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
-                RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
+                //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
                 fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), b, pt);
                 c->SaveAs(save_dir + "/" + savename);
@@ -149,14 +155,52 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
             }
         }
     }
+    
     f = TFile::Open(save_dir + "/RAA_fit_results.root", "recreate");
     fitResults->Write();
+    f->Close();
+    
     gROOT->SetBatch(kFALSE);
+}
+
+void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
+    TLegend* l = new TLegend(xmin, xmax, ymin, ymax);
+    l->AddEntry(gr->GetName(), entry, "p");
+    l->AddEntry(fit->GetName(), fit->GetTitle(), "l");
+    TString parname;
+    Double_t parval;
+    for (Int_t i = 0; i < fit->GetNpar(); i++) {
+        parname = fit->GetParName(i);
+        parval = fit->GetParameter(i);
+        l->AddEntry(parname, parname+"="+Form("%f", parval));
+    }
+    l->Draw();
+}
+
+void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString yTitle) {
+    gr->Draw();
+    gr->SetMarkerColor(4);
+    gr->SetMarkerStyle(21);
+    gr->Fit(fit, "Q", "AP");
+    gr->SetTitle(title);
+    gr->GetXaxis()->SetTitle(xTitle);
+    gr->GetYaxis()->SetTitle(yTitle);
+    gr->GetXaxis()->CenterTitle();
+    gr->GetYaxis()->CenterTitle();
+    gr->Draw("AP");
+}
+
+TGraph* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle) {
+    //tuple convention for x, y ordering opposite to TGraph convention
+    TGraph* gr = new TGraph(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1());
+    DrawGraphFit(gr, fit, title, xTitle, yTitle);
+    return gr;
 }
 
 TF1* CosFitFunc(TString coef0, TString coef1) {
     //2*x is for second fourier term
     TF1* fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
     fit->SetParNames(coef0, coef1);
+    fit->SetParameters(1.0, 0.0);
     return fit;
 }
