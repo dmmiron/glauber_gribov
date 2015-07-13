@@ -167,7 +167,7 @@ Double_t CalcAsymmetry(Double_t jet1, Double_t jet2, Bool_t x_j) {
     }
 }
 
-TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Int_t pair_type, Bool_t x_j) {
+TH2* SampleAsymmetry(TH2* jets, Int_t n_samples, Bool_t x_j, Double_t normalization, Double_t minPt, Double_t maxPt, Int_t pair_type) {
     Double_t jetLoss1, jetLoss2, jet1, jet2;
     TH2* subleading = new TH2F("Subleading ratio", "Subleading ratio", 100, 0, 1, maxPt, 0, maxPt);
 
@@ -232,27 +232,7 @@ TH2* SampleAsymmetry(Int_t n_samples, TH2* jets, Double_t normalization, Double_
     return subleading;
 }
 
-//Not really used
-TH1* SampleAsymmetryLoss(Int_t n, TH2* jets) {
-    Double_t jet1, jet2;
-    TH1* subleading = new TH1F("Subleading ratio", "Subleading ratio", 100, 0, 1);
-
-    Double_t A_j;
-    for (int i = 0; i < n; i++) {
-
-        jets->GetRandom2(jet1, jet2);
-        if (jet1 <= jet2) {
-            A_j = (jet2-jet1)/(jet2+jet1);
-        }
-        else {
-            A_j = (jet1-jet2)/(jet1+jet2);
-        }
-        subleading->Fill(A_j);
-    }
-    return subleading;
-}
-
-TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t normalization, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
+TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Bool_t x_j, Int_t n_samples, Double_t normalization, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
     TH2* initial = (TH2*)initial_in->Clone();
     TAxis* pt1 = initial->GetXaxis();
     Int_t binlow = pt1->FindBin(minPt);
@@ -268,9 +248,14 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
 
     TString name = FlavorToString(flavor1, flavor2);
     TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-    TH1* x_j = new TH1F(name, title, 200, -1, 1);
-    SetAxes(x_j, "x_j");
-     
+    TH1* asym = new TH1F(name, title, 200, -1, 1);
+    if (x_j) { 
+        SetAxes(asym, "x_j");
+    }
+    else {
+        SetAxes(asym, "A_j");
+    }
+
     if (flavor1 == GLUON) {
         coef1 = normalization*GLUON_RATIO;
     }
@@ -289,31 +274,13 @@ TH1* SampleAsymmetryPYTHIA(TH2* initial_in, TH2* loss, Int_t n_samples, Double_t
             cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
         }
         */
-        x_j->Fill(CalcAsymmetry(out1, out2));
-        /*
-        if (out1 >= 0 && out2 >= 0) {
-            if (out1 > out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (out2 > out1) {
-                x_j->Fill(out1/out2);
-            }
-        }
-        else {
-            if (out1 > -out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (-out2 > out1) {
-                x_j->Fill(out1/out2);
-            } 
-        }
-        */
+        asym->Fill(CalcAsymmetry(out1, out2, x_j));
         count++;
     }
-    return x_j;
+    return asym;
 }
 
-TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
     vector<TH2*> initialJets = vector<TH2*>();
     TH2* initial;
     TH2* temp;
@@ -342,8 +309,13 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_sample
 
     TString name = "combined";
     TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-    TH1* x_j = new TH1F(name, title, 200, -1, 1);
-    SetAxes(x_j, "x_j");
+    TH1* asym = new TH1F(name, title, 200, -1, 1);
+    if (x_j) {
+        SetAxes(asym, "x_j");
+    }
+    else {
+        SetAxes(asym, "A_j");
+    }
     Int_t count = 0;
     Int_t bin;
     Int_t flavor_pair;
@@ -372,53 +344,42 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Int_t n_sample
             cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
         }
         */
-        x_j->Fill(CalcAsymmetry(out1, out2));
-        /*
-        if (out1 >= 0 && out2 >= 0) {
-            if (out1 > out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (out2 > out1) {
-                x_j->Fill(out1/out2);
-            }
-        }
-        else {
-            if (out1 > -out2) {
-                x_j->Fill(out2/out1);
-            }
-            else if (-out2 > out1) {
-                x_j->Fill(out1/out2);
-            } 
-        }
-        */
+        asym->Fill(CalcAsymmetry(out1, out2, x_j));
         count++;
     }
-    return x_j;
+    return asym;
 }
 
-THStack* SweepFlavor(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
+THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
-    THStack *stack = new THStack("Jet Asymmetry", TString::Format("x_j (b=%.1f, normalization=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, phi, minPt, maxPt));
+    TString stacktitle;
+    if (x_j) {
+        stacktitle = Form("x_j (b=%.1f, normalization=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, phi, minPt, maxPt);
+    }
+    else {
+        stacktitle = Form("A_j (b=%.1f, normalization=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, normalization, phi, minPt, maxPt);
+    }
+    THStack *stack = new THStack("Jet Asymmetry", stacktitle); 
     vector<TH2*> initialJets = vector<TH2*>();
     //loop through quark, gluon combinations
     for (Int_t i = 0; i<2; i++) {
         for (Int_t j = 0; j<2; j++) {
             initial = LoadPYTHIA(i, j);
             initialJets.push_back(initial);
-            stack->Add(SampleAsymmetryPYTHIA(initial, loss, nsamples, normalization, i, j, minPt, maxPt));
+            stack->Add(SampleAsymmetryPYTHIA(initial, loss, x_j, nsamples, normalization, i, j, minPt, maxPt));
         }
     }
     if (combined) {
         vector<TH1*> fracs = LoadFracs("fractions.root");
         initial = LoadPYTHIA(ALL, ALL);
         initialJets.push_back(initial);
-        stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, nsamples, normalization, fracs, minPt, maxPt));
+        stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, x_j, nsamples, normalization, fracs, minPt, maxPt));
     }
     return stack;
 }
 
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
     files->Sort();
     THStack* hists;
@@ -434,14 +395,14 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> frac
             b = ParseParameter(fname, "b"); 
             phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, fracs, minPt, maxPt));
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, x_j, b, normalization, phi, fracs, minPt, maxPt));
             }
         }
     }
     return stacks;
 }
 
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
     files->Sort();
     THStack* hists;
@@ -457,14 +418,14 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
             b = ParseParameter(fname, "b"); 
             phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
-                stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt));
+                stacks.push_back(FlavorsPlusCombined(fname, nsamples, x_j, b, normalization, phi, minPt, maxPt));
             }
         }
     }
     return stacks;
 }
 
-TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Double_t minPt, Double_t maxPt) {
+TMap* SweepDirMap(TString dirname, Int_t nsamples, Bool_t x_j, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
     files->Sort();
     THStack* hists;
@@ -484,7 +445,7 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Doubl
             phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
                 key = new TObjString(TString::Format("b%.1f_phi%.1f", b, phi));
-                hists = FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt); 
+                hists = FlavorsPlusCombined(fname, nsamples, x_j, b, normalization, phi, minPt, maxPt); 
                 stacks->Add((TObject*)key, hists); 
             }
         }
@@ -510,15 +471,15 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
     return combined;
 }
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, phi, minPt, maxPt, false);
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, x_j, b, normalization, phi, minPt, maxPt, false);
     TH1* combined = Combine(hists, fracs);
     hists->Add(combined);
     return hists;
 }
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt) {
-    THStack* hists = SweepFlavor(lossFile, nsamples, b, normalization, phi, minPt, maxPt, true);
+THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt) {
+    THStack* hists = SweepFlavor(lossFile, nsamples, x_j, b, normalization, phi, minPt, maxPt, true);
     return hists;
 }
 
@@ -670,7 +631,7 @@ Double_t ParseTheta(TString s) {
 }
 
 Double_t ParseParameter(TString s, TString paramname) {
-    TRegexp regex = TRegexp(paramname+TString("[0-9]*"));
+    TRegexp regex = TRegexp(paramname+TString("[0-9]+"));
     TString sub(s(regex));
     Double_t param = TString(sub(paramname.Length(), sub.Length())).Atof();
     return param;
