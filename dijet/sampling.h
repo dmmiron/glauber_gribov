@@ -74,6 +74,8 @@ Double_t Parseb(TString s);
 
 Double_t ParsePhi(TString s);
 
+Double_t ParseParameter(TString s, TString paramname);
+
 vector<Double_t> CalcMeans(THStack* stack);
 
 TNtuple* CalcMeansTuple(TMap* asymmap);

@@ -84,21 +84,31 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     TKey* key;
     TIter iter(keys);
     TNtuple* means;
-    Double_t b;
+    Double_t b, DE;
     TString varexp = flavor + ":phi";
     TString cutexp;
+    TString histname;
     TString savename;
+    TF1* fit;
+    TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
+        DE = ParseParameter(key->GetName(), "DE=");
         for (Double_t b=0; b<15; b++) {
+            fit = CosFitFunc("A", "c2");
             c = new TCanvas();
             cutexp = TString::Format("b==%.1f", b);
-            means->Draw(varexp, cutexp, "COLZ");
+            histname = TString::Format("b%.1f", b);
+            //means->Draw(varexp, cutexp, "COLZ");
+            means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
+            fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
             savename = TString::Format("%s_%s_b=%.1f.pdf", means->GetName(), (const char*)flavor, b);
             c->SaveAs(save_dir + "/" + savename);
             c->Close();
         }
     }
+    f = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
+    fitResults->Write();
     gROOT->SetBatch(kFALSE);
 }
 
@@ -110,19 +120,28 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     TKey* key;
     TIter next(keys);
     TNtuple* RAA;
-    Double_t b;
+    TNtuple* fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisq:ndf");
+    Double_t b, pt, DE;
     TString varexp = "RAA:phi";
     TString cutexp;
+    TString histname;
     TString savename;
-    Double_t pt;
+    TF1* fit;
     while ((key = (TKey*)next())) {
         RAA = (TNtuple*)f->Get(key->GetName());
+        DE = ParseParameter(key->GetName(), "DE=");
+        cout << DE << " DE " << key->GetName() << endl;
         for (Double_t b=0; b<15; b++) {
             pt = minPt;
             while (pt < maxPt) {
+                fit = CosFitFunc("A", "v2");
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
-                RAA->Draw(varexp, cutexp, "COLZ");
+                histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
+                //RAA->Draw(varexp, cutexp, "COLZ");
+                //SHOULD BE ABLE TO FIX DRAWING OPTIONS
+                RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
+                fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), b, pt);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
@@ -130,6 +149,14 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
             }
         }
     }
+    f = TFile::Open(save_dir + "/RAA_fit_results.root", "recreate");
+    fitResults->Write();
     gROOT->SetBatch(kFALSE);
 }
 
+TF1* CosFitFunc(TString coef0, TString coef1) {
+    //2*x is for second fourier term
+    TF1* fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
+    fit->SetParNames(coef0, coef1);
+    return fit;
+}

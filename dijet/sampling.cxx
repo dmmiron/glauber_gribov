@@ -120,8 +120,8 @@ void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Dou
     while ((file=(TSystemFile*)next())) {
         if (!file->IsDirectory()) {
             fname = file->GetName();
-            b = Parseb(fname);
-            phi = ParsePhi(fname);
+            b = ParseParameter(fname, "b");
+            phi = ParseParameter(fname, "phi");
             outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
             jets = ((TH2*)LoadJets(sampled_dir+"/"+fname))->ProjectionX();
             MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
@@ -431,8 +431,8 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, vector<Double_t> frac
         TString fname;
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
-            b = Parseb(fname); 
-            phi = ParsePhi(fname);
+            b = ParseParameter(fname, "b"); 
+            phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
                 stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, fracs, minPt, maxPt));
             }
@@ -454,8 +454,8 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Double_t normalizatio
         TString fname;
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
-            b = Parseb(fname); 
-            phi = ParsePhi(fname);
+            b = ParseParameter(fname, "b"); 
+            phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
                 stacks.push_back(FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt));
             }
@@ -480,8 +480,8 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Double_t normalization, Doubl
         TString fname;
         while ((file=(TSystemFile*)next())) {
             fname = dirname + file->GetName();
-            b = Parseb(fname); 
-            phi = ParsePhi(fname);
+            b = ParseParameter(fname, "b"); 
+            phi = ParseParameter(fname, "phi");
             if (!file->IsDirectory()) {
                 key = new TObjString(TString::Format("b%.1f_phi%.1f", b, phi));
                 hists = FlavorsPlusCombined(fname, nsamples, b, normalization, phi, minPt, maxPt); 
@@ -645,6 +645,7 @@ vector<Double_t> CalcMeans(THStack* stack) {
     return means;
 }
 
+//Deprecated
 Double_t Parseb(TString s) {
     TRegexp regex = TRegexp("b[0-9]*");
     TString sub(s(regex));
@@ -652,6 +653,7 @@ Double_t Parseb(TString s) {
     return b;
 }
 
+//Deprecated
 Double_t ParsePhi(TString s) {
     TRegexp regex = TRegexp("phi[0-9]*");
     TString sub(s(regex));
@@ -659,11 +661,19 @@ Double_t ParsePhi(TString s) {
     return phi;
 }
 
+//Deprecated
 Double_t ParseTheta(TString s) {
     TRegexp regex = TRegexp("theta[0-9]*");
     TString sub(s(regex));
     Double_t theta = TString(sub(5, sub.Length())).Atof();
     return theta;
+}
+
+Double_t ParseParameter(TString s, TString paramname) {
+    TRegexp regex = TRegexp(paramname+TString("[0-9]*"));
+    TString sub(s(regex));
+    Double_t param = TString(sub(paramname.Length(), sub.Length())).Atof();
+    return param;
 }
 
 //want b, phi, mean x_j_s
@@ -675,8 +685,8 @@ TNtuple* CalcMeansTuple(TMap* asymmap) {
     Double_t b, phi;
     vector<Double_t> means;
     while ((key = iter->Next())) {
-        b = Parseb(key->GetName());
-        phi = ParsePhi(key->GetName());
+        b = ParseParameter(key->GetName(), "b");
+        phi = ParseParameter(key->GetName(), "phi");
         stack = (THStack*)asymmap->GetValue(key);
         means = CalcMeans(stack);
         out->Fill(b, phi, means[0], means[1], means[2], means[3], means[4]);
@@ -697,8 +707,8 @@ TMap* FixKeys(TMap* asymmap) {
     Double_t b;
     Double_t phi;
     while ((key = iter->Next())) {
-        b = Parseb(key->GetName());
-        phi = ParsePhi(key->GetName());
+        b = ParseParameter(key->GetName(), "b");
+        phi = ParseParameter(key->GetName(), "phi");
         new_key = new TObjString(MakeKey(b, phi));
         out->Add(new_key, (TH1*)asymmap->GetValue(key));
     }
@@ -713,8 +723,8 @@ TMap* FixKeysTheta(TMap* asymmap) {
     Double_t b;
     Double_t phi;
     while ((key = iter->Next())) {
-        b = Parseb(key->GetName());
-        phi = ParseTheta(key->GetName());
+        b = ParseParameter(key->GetName(), "b");
+        phi = ParseParameter(key->GetName(), "theta");
         new_key = new TObjString(MakeKey(b, phi));
         out->Add(new_key, (TH1*)asymmap->GetValue(key));
     }
@@ -758,7 +768,7 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
     TFile* f;
     TString key= TString::Format("%s_DE=%.2f", (const char*)flavor, deltaE);
     TH1* spectrum;
-    TNtuple* out = new TNtuple("Single_Jet_RAA", key, "b:phi:pt:RAA");
+    TNtuple* out = new TNtuple(key, "Single_Jet_RAA", "b:phi:pt:RAA");
     Double_t pt;
     Double_t b;
     Double_t phi;
@@ -768,8 +778,8 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
             fname = file->GetName();
             f = TFile::Open(dirname + "/" + fname);
             spectrum = (TH1*)f->Get(key);
-            b = Parseb(fname);
-            phi = ParsePhi(fname);
+            b = ParseParameter(fname, "b");
+            phi = ParseParameter(fname, "phi");
             pt = minPt;
             while (pt < maxPt) {
                 bin = spectrum->GetBin(pt);
@@ -780,3 +790,4 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
     }
     return out;
 }
+
