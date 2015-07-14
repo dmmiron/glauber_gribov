@@ -142,7 +142,6 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     while ((key = (TKey*)next())) {
         RAA = (TNtuple*)f->Get(key->GetName());
         DE = ParseParameter(key->GetName(), "DE=");
-        cout << DE << " DE " << key->GetName() << endl;
         for (Double_t b=0; b<15; b++) {
             pt = minPt;
             while (pt < maxPt) {
@@ -151,8 +150,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
                 RAA->Draw(varexp, cutexp, "goff");
-
-                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA"); 
+                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi (deg)", "RAA"); 
                 DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 

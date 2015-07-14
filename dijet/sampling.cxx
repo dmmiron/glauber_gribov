@@ -432,9 +432,14 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Bool_t x_j, Double_t normaliz
     TList* files = GetFiles(dirname);
     files->Sort();
     THStack* hists;
-    //map<pair<Double_t, Double_t>, THStack*> stacks;
     TMap* stacks = new TMap();
-    //pair<Double_t, Double_t> key;
+    if (x_j) {
+        stacks->SetName(Form("x_j_DE=%.2f", normalization));
+    }
+    else {
+        stacks->SetName(Form("x_j_DE=%.2f", normalization));
+    }
+    //stacks->SetTitle("pt_[%.1f,%.1f]", minPt, maxPt);
     TObjString* key;
     Double_t b;
     Double_t phi;
