@@ -614,9 +614,9 @@ vector<vector<Double_t>> CalcMeans(THStack* stack) {
         vector<Double_t> entry;
         entry.push_back(x_j->GetMean());
         entry.push_back(x_j->GetMeanError());
-        means.push_back(entry);
+        output.push_back(entry);
     }
-    return means;
+    return output;
 }
 
 //Deprecated
@@ -663,7 +663,7 @@ TNtuple* CalcMeansTuple(TMap* asymmap, Double_t DE, Bool_t x_j) {
     TObject* key;
     THStack* stack;
     Double_t b, phi;
-    vector<Double_t> means;
+    vector<vector<Double_t>> means;
     while ((key = iter->Next())) {
         b = ParseParameter(key->GetName(), "b");
         phi = ParseParameter(key->GetName(), "phi");

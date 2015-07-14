@@ -5,6 +5,7 @@
 #include <THStack.h>
 #include <TMap.h>
 #include <TGraph.h>
+#include <TGraphErrors.h>
 
 void plotTHStack(THStack *hists, TString xtitle="", TString ytitle="", TString saveName="default.pdf");
 
@@ -20,7 +21,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
 
 void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString yTitle);
 
-TGraph* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle);
+TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle);
 
 void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin=0.6, Double_t xmax=0.85, Double_t ymin=0.7, Double_t ymax=0.9);
 

@@ -87,6 +87,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     Double_t b, DE;
     //flavor means, phi, error on flavor means
     TString varexp = flavor + ":phi:"+ flavor+"E";
+    cout << varexp << endl;
     TString cutexp;
     TString histname;
     TString savename;
@@ -101,6 +102,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
+                means->Show(0);
                 means->Draw(varexp, cutexp, "goff");
                 if (TString(means->GetName()).Contains("x_j")) {
                     gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
@@ -187,10 +189,10 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xma
     l->Draw();
 }
 
-void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString yTitle) {
+void DrawGraphFit(TGraphErrors* gr, TF1* fit, TString title, TString xTitle, TString yTitle) {
     gr->Draw();
     gr->SetMarkerColor(4);
-    gr->SetMarkerStyle(21);
+    //gr->SetMarkerStyle(21);
     gr->Fit(fit, "Q", "AP");
     gr->SetTitle(title);
     gr->GetXaxis()->SetTitle(xTitle);
@@ -200,9 +202,9 @@ void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString y
     gr->Draw("AP");
 }
 
-TGraph* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle) {
+TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle) {
     //tuple convention for x, y ordering opposite to TGraph convention
-    TGraph* gr = new TGraph(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1());
+    TGraphErrors* gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, ntuple->GetV3());
     DrawGraphFit(gr, fit, title, xTitle, yTitle);
     return gr;
 }
