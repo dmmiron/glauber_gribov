@@ -605,13 +605,16 @@ void SetAxes(TH3* hist, TString xtitle, TString ytitle, TString ztitle) {
     axis->SetTitle(ztitle);
 }
 
-vector<Double_t> CalcMeans(THStack* stack) {
-    vector<Double_t> means;
+vector<vector<Double_t>> CalcMeans(THStack* stack) {
+    vector<vector<Double_t>> output;
     TList* hists = stack->GetHists();
     TIter next(hists);
     TH1* x_j;
     while ((x_j = (TH1*)next())) {
-        means.push_back(x_j->GetMean());
+        vector<Double_t> entry;
+        entry.push_back(x_j->GetMean());
+        entry.push_back(x_j->GetMeanError());
+        means.push_back(entry);
     }
     return means;
 }
@@ -652,10 +655,10 @@ TNtuple* CalcMeansTuple(TMap* asymmap, Double_t DE, Bool_t x_j) {
     TIterator* iter = asymmap->MakeIterator();
     TNtuple* out;
     if (x_j) {
-        out = new TNtuple("means_x_j", "means_x_j", "b:phi:DE:qq:qg:gq:gg:combined");
+        out = new TNtuple("means_x_j", "means_x_j", "b:phi:DE:qq:qqE:qg:qgE:gq:gqE:gg:ggE:combined:combinedE");
     }
     else {
-        out = new TNtuple("means_A_j", "means_A_j", "b:phi:DE:qq:qg:gq:gg:combined");
+        out = new TNtuple("means_A_j", "means_A_j", "b:phi:DE:qq:qqE:qg:qgE:gq:gqE:gg:ggE:combined:combinedE");
     }
     TObject* key;
     THStack* stack;
@@ -666,7 +669,7 @@ TNtuple* CalcMeansTuple(TMap* asymmap, Double_t DE, Bool_t x_j) {
         phi = ParseParameter(key->GetName(), "phi");
         stack = (THStack*)asymmap->GetValue(key);
         means = CalcMeans(stack);
-        out->Fill(b, phi, DE, means[0], means[1], means[2], means[3], means[4]);
+        out->Fill(b, phi, DE, means[0][0], means[0][1], means[1][0], means[1][1], means[2][0], means[2][1], means[3][0], means[3][1], means[4][0], means[4][1]);
     }
     return out;
 }

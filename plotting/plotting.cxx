@@ -85,12 +85,13 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     TIter iter(keys);
     TNtuple* means;
     Double_t b, DE;
-    TString varexp = flavor + ":phi";
+    //flavor means, phi, error on flavor means
+    TString varexp = flavor + ":phi:"+ flavor+"E";
     TString cutexp;
     TString histname;
     TString savename;
     TF1* fit;
-    TGraph* gr;
+    TGraphErrors* gr;
     TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
@@ -175,6 +176,7 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xma
     //l->SetOption("NB");
     l->AddEntry(gr->GetName(), entry, "p");
     l->AddEntry(fit->GetName(), fit->GetTitle(), "l");
+    l->SetFillColor(0);
     TString parname;
     Double_t parval;
     for (Int_t i = 0; i < fit->GetNpar(); i++) {
