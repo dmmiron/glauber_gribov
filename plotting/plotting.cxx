@@ -11,7 +11,6 @@
 #include <TLegend.h>
 #include <TStyle.h>
 #include <TKey.h>
-#include <TGraph.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName) {
     TCanvas *canvas = new TCanvas();
@@ -91,21 +90,31 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     TString histname;
     TString savename;
     TF1* fit;
+    TGraph* gr;
     TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
-        DE = ParseParameter(key->GetName(), "DE=");
-        for (Double_t b=0; b<15; b++) {
-            fit = CosFitFunc("A", "c2");
-            c = new TCanvas();
-            cutexp = TString::Format("b==%.1f", b);
-            histname = TString::Format("b%.1f", b);
-            //means->Draw(varexp, cutexp, "COLZ");
-            means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
-            fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
-            savename = TString::Format("%s_%s_b=%.1f.pdf", means->GetName(), (const char*)flavor, b);
-            c->SaveAs(save_dir + "/" + savename);
-            c->Close();
+        for (DE = 0.0; DE<15; DE++) {
+            for (b=0.0; b<15; b++) {
+                fit = CosFitFunc("A", "c2");
+                c = new TCanvas();
+                cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
+                histname = TString::Format("b%.1f_DE%.1f", b, DE);
+                means->Draw(varexp, cutexp, "goff");
+                if (TString(means->GetName()).Contains("x_j")) {
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
+                    DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
+                }
+                else {
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "A_j");
+                    DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
+                }
+                //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
+                fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
+                savename = TString::Format("%s_%s_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, b, DE);
+                c->SaveAs(save_dir + "/" + savename);
+                c->Close();
+            }
         }
     }
     f = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
@@ -164,7 +173,8 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
 }
 
 void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
-    TLegend* l = new TLegend(xmin, xmax, ymin, ymax);
+    TLegend* l = new TLegend(xmin, ymin, xmax, ymax);
+    //l->SetOption("NB");
     l->AddEntry(gr->GetName(), entry, "p");
     l->AddEntry(fit->GetName(), fit->GetTitle(), "l");
     TString parname;

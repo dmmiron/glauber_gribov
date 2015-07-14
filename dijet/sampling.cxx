@@ -5,6 +5,7 @@
 #include <TSystemFile.h>
 #include <TRegexp.h>
 #include <TKey.h>
+#include <TTree.h>
 #include <TObjString.h>
 
 TH1* LoadJets(TString filename) {
@@ -16,7 +17,7 @@ TH1* LoadJets(TString filename) {
 }
 
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
-    TFile* f = TFile::Open("initial/total.root");
+    TFile* f = TFile::Open("~/initial/total.root");
     TString name;
     if (flavor1 == ALL || flavor2 == ALL) {
         name = TString("h3_pt1_pt2_dphi_All");
@@ -371,7 +372,7 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, D
         }
     }
     if (combined) {
-        vector<TH1*> fracs = LoadFracs("fractions.root");
+        vector<TH1*> fracs = LoadFracs("~/fractions.root");
         initial = LoadPYTHIA(ALL, ALL);
         initialJets.push_back(initial);
         stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, x_j, nsamples, normalization, fracs, minPt, maxPt));
@@ -379,6 +380,7 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, D
     return stack;
 }
 
+/*
 vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
     files->Sort();
@@ -401,6 +403,7 @@ vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Do
     }
     return stacks;
 }
+*/
 
 vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, Double_t normalization, Double_t minPt, Double_t maxPt) {
     TList* files = GetFiles(dirname);
@@ -471,12 +474,14 @@ TH1* Combine(THStack *plots, vector<Double_t> fracs) {
     return combined;
 }
 
+/*
 THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi,  vector<Double_t> fracs, Double_t minPt, Double_t maxPt) {
     THStack* hists = SweepFlavor(lossFile, nsamples, x_j, b, normalization, phi, minPt, maxPt, false);
     TH1* combined = Combine(hists, fracs);
     hists->Add(combined);
     return hists;
 }
+*/
 
 THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt) {
     THStack* hists = SweepFlavor(lossFile, nsamples, x_j, b, normalization, phi, minPt, maxPt, true);
@@ -638,9 +643,15 @@ Double_t ParseParameter(TString s, TString paramname) {
 }
 
 //want b, phi, mean x_j_s
-TNtuple* CalcMeansTuple(TMap* asymmap) {
+TNtuple* CalcMeansTuple(TMap* asymmap, Double_t DE, Bool_t x_j) {
     TIterator* iter = asymmap->MakeIterator();
-    TNtuple* out = new TNtuple("means", "x_j", "b:phi:qq:qg:gq:gg:combined");
+    TNtuple* out;
+    if (x_j) {
+        out = new TNtuple("means_x_j", "means_x_j", "b:phi:DE:qq:qg:gq:gg:combined");
+    }
+    else {
+        out = new TNtuple("means_A_j", "means_A_j", "b:phi:DE:qq:qg:gq:gg:combined");
+    }
     TObject* key;
     THStack* stack;
     Double_t b, phi;
@@ -650,12 +661,52 @@ TNtuple* CalcMeansTuple(TMap* asymmap) {
         phi = ParseParameter(key->GetName(), "phi");
         stack = (THStack*)asymmap->GetValue(key);
         means = CalcMeans(stack);
-        out->Fill(b, phi, means[0], means[1], means[2], means[3], means[4]);
+        out->Fill(b, phi, DE, means[0], means[1], means[2], means[3], means[4]);
     }
     return out;
 }
 
-
+void CalcMeansTuple(TString dirname, TString outfile) {
+    TList* files = GetFiles(dirname);
+    TSystemFile* file;
+    TIter next(files);
+    TString fname, mapname;
+    TFile* f;
+    TMap* map;
+    TList* x_j_ntuples = new TList();
+    x_j_ntuples->SetName("x_j_ntuples");
+    TList* A_j_ntuples = new TList();
+    A_j_ntuples->SetName("A_j_ntuples");
+    TObject* key;
+    Double_t DE;
+    while ((file = (TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            fname = file->GetName();
+            DE = ParseParameter(fname, "DE=");
+            f = TFile::Open(dirname + "/" + fname);
+            TIter keys(f->GetListOfKeys());
+            while ((key = keys())) {
+                mapname = key->GetName();
+                map = (TMap*)f->Get(mapname);
+                map->SetName(mapname);
+                if (mapname.Contains("x_j")) {
+                    x_j_ntuples->Add(CalcMeansTuple(map, DE, X_J));
+                }
+                else {
+                    A_j_ntuples->Add(CalcMeansTuple(map, DE, A_J));
+                }
+            }
+        }
+    }
+    TTree* outtuple;
+    TFile* out = TFile::Open(outfile, "recreate");
+    outtuple = TTree::MergeTrees(x_j_ntuples);
+    outtuple->Write();
+    outtuple = TTree::MergeTrees(A_j_ntuples);
+    outtuple->Write();
+    f->Close();
+}
+    
 TString MakeKey(Double_t b, Double_t phi) {
     return TString::Format("b%.1fphi%.1f", b, phi);
 }

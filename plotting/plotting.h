@@ -4,6 +4,7 @@
 #include <TH1.h>
 #include <THStack.h>
 #include <TMap.h>
+#include <TGraph.h>
 
 void plotTHStack(THStack *hists, TString xtitle="", TString ytitle="", TString saveName="default.pdf");
 
@@ -21,7 +22,7 @@ void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString y
 
 TGraph* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle);
 
-void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin=0.6, Double_t xmax=0.7, Double_t ymin=0.85, Double_t ymax=0.9);
+void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin=0.6, Double_t xmax=0.85, Double_t ymin=0.7, Double_t ymax=0.9);
 
 TF1* CosFitFunc(TString coef0="A", TString coef1="c2");
 

@@ -1,6 +1,7 @@
 void LoadFiles() {
-    gROOT->LoadMacro("density.cxx");
-    gROOT->LoadMacro("sampling.cxx");
-    gROOT->LoadMacro("../plotting/plotting.cxx");
+    gROOT->LoadMacro("~/glauber_gribov/dijet/density.cxx++");
+    gROOT->LoadMacro("~/glauber_gribov/dijet/sampling.cxx++");
+ 
+ 
 }
 

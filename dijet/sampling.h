@@ -45,7 +45,7 @@ TMap* SweepDirMap(TString dirname, Int_t nsamples, Bool_t x_j=X_J, Double_t norm
 
 TH1* Combine(THStack *plots, vector<Double_t> fracs);
 
-THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization=10.0, Double_t phi=-1.0, vector<Double_t> fracs = {.25, .25, .25, .25},  Double_t minPt=100.0, Double_t maxPt=200.0); 
+//THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization=10.0, Double_t phi=-1.0, vector<Double_t> fracs = {.25, .25, .25, .25},  Double_t minPt=100.0, Double_t maxPt=200.0); 
 
 THStack* FlavorsPlusCombined(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization=10.0, Double_t phi=-1.0, Double_t minPt=100.0, Double_t maxPt=200.0); 
 
@@ -77,7 +77,9 @@ Double_t ParseParameter(TString s, TString paramname);
 
 vector<Double_t> CalcMeans(THStack* stack);
 
-TNtuple* CalcMeansTuple(TMap* asymmap);
+TNtuple* CalcMeansTuple(TMap* asymmap, Double_t DE, Bool_t x_j=X_J);
+
+void CalcMeansTuple(TString dirname, TString outfile);
 
 TH1* AverageBin(TMap* asymmap, Double_t cent_min, Double_t cent_max, Double_t phi, TString flavor="combined");
 
