@@ -4,6 +4,7 @@
 #include <TH1.h>
 #include <THStack.h>
 #include <TMap.h>
+#include <TGraph.h>
 
 void plotTHStack(THStack *hists, TString xtitle="", TString ytitle="", TString saveName="default.pdf");
 

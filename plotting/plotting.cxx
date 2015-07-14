@@ -11,7 +11,6 @@
 #include <TLegend.h>
 #include <TStyle.h>
 #include <TKey.h>
-#include <TGraph.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName) {
     TCanvas *canvas = new TCanvas();
@@ -91,6 +90,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     TString histname;
     TString savename;
     TF1* fit;
+    TGraph* gr;
     TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
@@ -100,8 +100,15 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
             c = new TCanvas();
             cutexp = TString::Format("b==%.1f", b);
             histname = TString::Format("b%.1f", b);
-            //means->Draw(varexp, cutexp, "COLZ");
-            means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
+            means->Draw(varexp, cutexp, "goff");
+            if (TString(means->GetName()).Contains("x_j")) {
+                gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
+            }
+            else {
+                gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "A_j");
+            }
+            DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
+            //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
             fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
             savename = TString::Format("%s_%s_b=%.1f.pdf", means->GetName(), (const char*)flavor, b);
             c->SaveAs(save_dir + "/" + savename);
@@ -133,7 +140,6 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     while ((key = (TKey*)next())) {
         RAA = (TNtuple*)f->Get(key->GetName());
         DE = ParseParameter(key->GetName(), "DE=");
-        cout << DE << " DE " << key->GetName() << endl;
         for (Double_t b=0; b<15; b++) {
             pt = minPt;
             while (pt < maxPt) {
@@ -142,8 +148,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
                 RAA->Draw(varexp, cutexp, "goff");
-
-                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA"); 
+                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi (deg)", "RAA"); 
                 DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
