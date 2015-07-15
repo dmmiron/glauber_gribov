@@ -89,5 +89,6 @@ TString MakeKey(Double_t b, Double_t phi);
 
 TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t pt_step, Double_t deltaE, TString flavor);
 
+void CloseFiles(vector<TFile*> fs);
 #endif
 

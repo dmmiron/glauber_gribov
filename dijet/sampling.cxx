@@ -679,6 +679,7 @@ void CalcMeansTuple(TString dirname, TString outfile) {
     TSystemFile* file;
     TIter next(files);
     TString fname, mapname;
+    vector<TFile*> fs;
     TFile* f;
     TMap* map;
     TList* x_j_ntuples = new TList();
@@ -692,10 +693,14 @@ void CalcMeansTuple(TString dirname, TString outfile) {
             fname = file->GetName();
             DE = ParseParameter(fname, "DE=");
             f = TFile::Open(dirname + "/" + fname);
+            fs.push_back(f);
+            //TFile f(dirname + "/" + fname);
             TIter keys(f->GetListOfKeys());
+            //TIter keys(f.GetListOfKeys());
             while ((key = keys())) {
                 mapname = key->GetName();
                 map = (TMap*)f->Get(mapname);
+                //map = (TMap*)f.Get(mapname);
                 map->SetName(mapname);
                 if (mapname.Contains("x_j")) {
                     x_j_ntuples->Add(CalcMeansTuple(map, DE, X_J));
@@ -712,7 +717,8 @@ void CalcMeansTuple(TString dirname, TString outfile) {
     outtuple->Write();
     outtuple = TTree::MergeTrees(A_j_ntuples);
     outtuple->Write();
-    f->Close();
+    out->Close();
+    CloseFiles(fs);
 }
     
 TString MakeKey(Double_t b, Double_t phi) {
@@ -811,3 +817,10 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
     return out;
 }
 
+void CloseFiles(vector<TFile*> fs) {
+    TFile* f;
+    for (vector<TFile*>::iterator it = fs.begin(); it != fs.end(); ++it) {
+        f = *it;
+        f->Close();
+    }
+}
