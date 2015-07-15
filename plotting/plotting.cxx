@@ -12,7 +12,7 @@
 #include <TStyle.h>
 #include <TKey.h>
 
-void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName) {
+void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName, Bool_t asym) {
     TCanvas *canvas = new TCanvas();
 
     TList *hist_l = hists->GetHists();
@@ -30,8 +30,13 @@ void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveNam
     hists->Draw("nostack");
     TAxis *Xaxis = hists->GetHistogram()->GetXaxis();
     Xaxis->SetTitle(xtitle);
+    Xaxis->CenterTitle();
+    if (asym) {
+        Xaxis->SetRangeUser(0, 1.0);
+    }
     TAxis *Yaxis = hists->GetHistogram()->GetYaxis();
     Yaxis->SetTitle(ytitle);
+    Yaxis->CenterTitle();
     hists->Draw("nostack");
     legend->Draw("");
     canvas->SaveAs(saveName + ".pdf");
@@ -87,7 +92,6 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     Double_t b, DE;
     //flavor means, phi, error on flavor means
     TString varexp = flavor + ":phi:"+ flavor+"E";
-    cout << varexp << endl;
     TString cutexp;
     TString histname;
     TString savename;
@@ -102,14 +106,15 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
-                means->Show(0);
                 means->Draw(varexp, cutexp, "goff");
                 if (TString(means->GetName()).Contains("x_j")) {
                     gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
+                    //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
                 }
                 else {
                     gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "A_j");
+                    //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
                 }
                 //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
