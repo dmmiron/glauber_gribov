@@ -109,12 +109,14 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
                 means->Draw(varexp, cutexp, "goff");
                 if (TString(means->GetName()).Contains("x_j")) {
                     gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
+                    SetRange(gr, .005);
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
                 }
                 else {
                     gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "A_j");
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
+                    SetRange(gr, .005);
                     DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
                 }
                 //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
@@ -160,6 +162,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 RAA->Draw(varexp, cutexp, "goff");
                 gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi (deg)", "RAA"); 
                 DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
+                SetRange(gr, .005);
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
                 fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
@@ -212,6 +215,14 @@ TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTi
     TGraphErrors* gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, ntuple->GetV3());
     DrawGraphFit(gr, fit, title, xTitle, yTitle);
     return gr;
+}
+
+void SetRange(TGraph* gr, Double_t buf) {
+    Double_t xmin, ymin, xmax, ymax;
+    gr->ComputeRange(xmin, ymin, xmax, ymax);
+    //cout << "xmin: " << xmin << ", ymin: " << ymin << ", xmax: " << xmax << ", ymax: " << ymax << endl;
+    cout << buf << endl;
+    gr->GetYaxis()->SetRangeUser(ymin-buf, ymax+buf);
 }
 
 TF1* CosFitFunc(TString coef0, TString coef1) {

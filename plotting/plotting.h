@@ -25,6 +25,8 @@ TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTi
 
 void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin=0.6, Double_t xmax=0.85, Double_t ymin=0.7, Double_t ymax=0.9);
 
+void SetRange(TGraph* gr, Double_t buf);
+
 TF1* CosFitFunc(TString coef0="A", TString coef1="c2");
 
 #endif
