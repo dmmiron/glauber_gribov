@@ -127,8 +127,9 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
             }
         }
     }
-    f = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
+    TFile* outfile = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
     fitResults->Write();
+    outfile->Close();
     f->Close();
     gROOT->SetBatch(kFALSE);
 }
@@ -174,8 +175,9 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
         }
     }
     
-    f = TFile::Open(save_dir + "/RAA_fit_results.root", "recreate");
+    TFile* outfile = TFile::Open(save_dir + "/RAA_fit_results.root", "recreate");
     fitResults->Write();
+    outfile->Close();
     f->Close();
     
     gROOT->SetBatch(kFALSE);

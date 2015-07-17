@@ -326,13 +326,13 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     //CLEAN UP THIS LOOP
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
     while (startPt < maxPt) {
-        scale = unquenchedTF->Integral(startPt,2*startPt)/unquenchedTF->Integral(minPt, 2*minPt);
+        scale = unquenchedTF->Integral(startPt,SAMPLE_COEF*startPt)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
         while (count < n_samples) {
             if (jets!=0) {
-                difference = unquenchedTF->GetRandom(startPt, 2.0*startPt)-(jets->GetRandom())*normalization;
+                difference = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt)-(jets->GetRandom())*normalization;
             }
             else {
-                difference = unquenchedTF->GetRandom(startPt, 2.0*startPt)-(SampleJet().first)*normalization;
+                difference = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt)-(SampleJet().first)*normalization;
             }
             if (difference>0) {
                 temp->Fill(difference);
@@ -342,7 +342,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
         count = 0;
         h->Add(temp, scale);
         temp->Reset();
-        startPt = startPt*2.0;
+        startPt = startPt*SAMPLE_COEF;
     }
     delete unquenched;
     delete temp;
@@ -366,16 +366,16 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t 
     Double_t start = minPt;
     Double_t scale;
     while (start < maxPt) {
-        scale = unquenchedTF->Integral(start,2*start)/unquenchedTF->Integral(minPt, 2*minPt);
+        scale = unquenchedTF->Integral(start,SAMPLE_COEF*start)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
         //cout << scale << endl;
         
         //cout << start << " " << start*2.0 << endl;
         for (Int_t i = 0; i < n_samples; i++) {
-            temp->Fill(unquenchedTF->GetRandom(start, start*2.0));
+            temp->Fill(unquenchedTF->GetRandom(start, start*SAMPLE_COEF));
         }
         //cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
         //cout << "scale: " << scale << endl;
-        start = start*2.0;
+        start = start*SAMPLE_COEF;
         h->Add(temp, scale);
         temp->Reset();
     }

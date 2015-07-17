@@ -13,6 +13,10 @@ TH1* LoadJets(TString filename) {
     TList *l = f->GetListOfKeys();
     TString name = l->First()->GetName();
     TH1* jets = (TH1*)f->Get(name);
+    //allow closing of f without deleting of jets
+    //means jets must be deleted later
+    jets->SetDirectory(0);
+    f->Close();
     return jets;
 }
 
@@ -29,6 +33,10 @@ TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     }
     cout << name << endl;
     TH3* init = (TH3*)f->Get(name);
+    //allow closing of f without deleting of jets
+    //means jets must be deleted later
+    init->SetDirectory(0);
+    f->Close();
     return (TH2*)init->Project3D("yx");
 }
 
@@ -126,6 +134,7 @@ void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Dou
             outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
             jets = ((TH2*)LoadJets(sampled_dir+"/"+fname))->ProjectionX();
             MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
+            delete jets; 
         }
     }
 }
@@ -377,6 +386,10 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, D
         initialJets.push_back(initial);
         stack->Add(SampleAsymmetryPYTHIA(initialJets, loss, x_j, nsamples, normalization, fracs, minPt, maxPt));
     }
+    for (vector<TH2*>::iterator it=initialJets.begin(); it !=initialJets.end(); ++it) {
+        delete *it;
+    }
+    delete loss;
     return stack;
 }
 
@@ -679,6 +692,7 @@ void CalcMeansTuple(TString dirname, TString outfile) {
     TSystemFile* file;
     TIter next(files);
     TString fname, mapname;
+    vector<TFile*> fs;
     TFile* f;
     TMap* map;
     TList* x_j_ntuples = new TList();
@@ -692,10 +706,14 @@ void CalcMeansTuple(TString dirname, TString outfile) {
             fname = file->GetName();
             DE = ParseParameter(fname, "DE=");
             f = TFile::Open(dirname + "/" + fname);
+            fs.push_back(f);
+            //TFile f(dirname + "/" + fname);
             TIter keys(f->GetListOfKeys());
+            //TIter keys(f.GetListOfKeys());
             while ((key = keys())) {
                 mapname = key->GetName();
                 map = (TMap*)f->Get(mapname);
+                //map = (TMap*)f.Get(mapname);
                 map->SetName(mapname);
                 if (mapname.Contains("x_j")) {
                     x_j_ntuples->Add(CalcMeansTuple(map, DE, X_J));
@@ -712,7 +730,8 @@ void CalcMeansTuple(TString dirname, TString outfile) {
     outtuple->Write();
     outtuple = TTree::MergeTrees(A_j_ntuples);
     outtuple->Write();
-    f->Close();
+    out->Close();
+    CloseFiles(fs);
 }
     
 TString MakeKey(Double_t b, Double_t phi) {
@@ -786,6 +805,7 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
     TIter next(files); 
     TString fname;
     TFile* f;
+    vector<TFile*> fs;
     TString key= TString::Format("%s_DE=%.2f", (const char*)flavor, deltaE);
     TH1* spectrum;
     TNtuple* out = new TNtuple(key, "Single_Jet_RAA", "b:phi:pt:RAA");
@@ -797,6 +817,7 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
         if (!file->IsDirectory()) {
             fname = file->GetName();
             f = TFile::Open(dirname + "/" + fname);
+            fs.push_back(f);
             spectrum = (TH1*)f->Get(key);
             b = ParseParameter(fname, "b");
             phi = ParseParameter(fname, "phi");
@@ -808,6 +829,14 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
             }
         }
     }
+    CloseFiles(fs);
     return out;
 }
 
+void CloseFiles(vector<TFile*> fs) {
+    TFile* f;
+    for (vector<TFile*>::iterator it = fs.begin(); it != fs.end(); ++it) {
+        f = *it;
+        f->Close();
+    }
+}
