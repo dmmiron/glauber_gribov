@@ -57,6 +57,8 @@ Int_t GetFlavorPair(Int_t bin, vector<TH1*> fracs);
 
 Double_t CentralityBin(Double_t endFrac);
 
+Double_t ImpactToBin(Double_t b);
+
 TH1* HistDiff(TH2* h);
 
 TList* GetFiles(TString dirname);

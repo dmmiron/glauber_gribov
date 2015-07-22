@@ -91,7 +91,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     TNtuple* means;
     Double_t b, DE;
     //flavor means, phi, error on flavor means
-    TString varexp = flavor + ":phi:"+ flavor+"E";
+    TString varexp = flavor + ":pi*phi/180.0:"+ flavor+"E";
     TString cutexp;
     TString histname;
     TString savename;
@@ -101,27 +101,33 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
         for (DE = 0.0; DE<15; DE++) {
+        //for (DE = 5.0; DE<6; DE++) {
             for (b=0.0; b<15; b++) {
+            //for (b=9.0; b<10; b++) {
                 fit = CosFitFunc("A", "c2");
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
                 means->Draw(varexp, cutexp, "goff");
                 if (TString(means->GetName()).Contains("x_j")) {
-                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "x_j");
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "x_j");
                     SetRange(gr, .005);
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
-                    DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
+                    DrawLegend(gr, fit, TString::Format("Centrality=%.1f%%, DE=%.1f GeV", 100*ImpactToBin(b), DE));
+                    //DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
                 }
                 else {
-                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "phi (deg)", "A_j");
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "A_j");
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     SetRange(gr, .005);
-                    DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
+                    DrawLegend(gr, fit, TString::Format("Centrality=%.1f%%, DE=%.1f GeV", 100*ImpactToBin(b), DE), 0.15, .4, 0.7, 0.9);
+                    //DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
                 }
                 //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
                 fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, b, DE);
+                c->SaveAs(save_dir + "/" + savename);
+                savename = TString::Format("%s_%s_b=%.1f_DE=%.1f.root", means->GetName(), (const char*)flavor, b, DE);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
             }
@@ -144,7 +150,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     TNtuple* RAA;
     TNtuple* fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisq:ndf");
     Double_t b, pt, DE;
-    TString varexp = "RAA:phi";
+    TString varexp = "RAA:pi*phi/180.0";
     TString cutexp;
     TString histname;
     TString savename;
@@ -161,13 +167,15 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
                 RAA->Draw(varexp, cutexp, "goff");
-                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi (deg)", "RAA"); 
+                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA"); 
                 DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
                 SetRange(gr, .005);
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
                 fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), b, pt);
+                c->SaveAs(save_dir + "/" + savename);
+                savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.root", RAA->GetName(), RAA->GetTitle(), b, pt);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
                 pt += pt_step;
@@ -186,15 +194,18 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
 void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
     TLegend* l = new TLegend(xmin, ymin, xmax, ymax);
     //l->SetOption("NB");
-    l->AddEntry(gr->GetName(), entry, "p");
-    l->AddEntry(fit->GetName(), fit->GetTitle(), "l");
+    l->AddEntry(gr->GetName(), entry, "ep");
+    //l->AddEntry(fit->GetName(), fit->GetTitle(), "l");
+    fit->SetLineColor(2);
+    l->AddEntry(fit, "A(1+2c_{2}cos(2#phi))", "l");
+    //fit->SetLineColor(2);
     l->SetFillColor(0);
     TString parname;
     Double_t parval;
     for (Int_t i = 0; i < fit->GetNpar(); i++) {
         parname = fit->GetParName(i);
         parval = fit->GetParameter(i);
-        l->AddEntry(parname, parname+"="+Form("%f", parval));
+        l->AddEntry(parname, parname+"="+Form("%f", parval), "");
     }
     l->Draw();
 }
@@ -202,7 +213,8 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xma
 void DrawGraphFit(TGraphErrors* gr, TF1* fit, TString title, TString xTitle, TString yTitle) {
     gr->Draw();
     gr->SetMarkerColor(4);
-    //gr->SetMarkerStyle(21);
+    gr->SetMarkerStyle(9);
+    gr->SetMarkerSize(.5);
     gr->Fit(fit, "Q", "AP");
     gr->SetTitle(title);
     gr->GetXaxis()->SetTitle(xTitle);
@@ -229,7 +241,7 @@ void SetRange(TGraph* gr, Double_t buf) {
 
 TF1* CosFitFunc(TString coef0, TString coef1) {
     //2*x is for second fourier term
-    TF1* fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
+    TF1* fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x))");
     fit->SetParNames(coef0, coef1);
     fit->SetParameters(1.0, 0.0);
     return fit;
