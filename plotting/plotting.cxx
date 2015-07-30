@@ -103,8 +103,8 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
         for (DE = 0.0; DE<15; DE++) {
         //for (DE = 5.0; DE<6; DE++) {
             for (b=0.0; b<15; b++) {
-                fit = CosFitFunc("c", nharmonics);
             //for (b=9.0; b<10; b++) {
+                fit = CosFitFunc("c", nharmonics);
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
@@ -127,7 +127,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
                 fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, nharmonics, b, DE);
                 c->SaveAs(save_dir + "/" + savename);
-                savename = TString::Format("%s_%s_b=%.1f_DE=%.1f.root", means->GetName(), (const char*)flavor, b, DE);
+                savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_DE=%.1f.root", means->GetName(), (const char*)flavor, nharmonics, b, DE);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
             }
@@ -175,7 +175,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), nharmonics, b, pt);
                 c->SaveAs(save_dir + "/" + savename);
-                savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.root", RAA->GetName(), RAA->GetTitle(), b, pt);
+                savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_pt=%.1f.root", RAA->GetName(), RAA->GetTitle(), nharmonics, b, pt);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
                 pt += pt_step;
@@ -245,17 +245,17 @@ TF1* CosFitFunc(TString coef, Int_t nharmonics) {
     switch (nharmonics) {
         case 2:
             fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
-            fit->setParNames("A", coef ++ "2");
+            fit->SetParNames("A", coef + "2");
             fit->SetParameters(1.0, 0.0);
             break;
         case 3:
-            fit = new TF1("fit", "[0]*(1+2*([1]*cos(2*x*(pi/180.0))+[2]*cos(3*x*(pi/180.0))))");
-            fit->SetParNames("A", coef++"2", coef++"3");
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0)))");
+            fit->SetParNames("A", coef+"2", coef+"3");
             fit->SetParameters(1.0, 0.0, 0.0);
             break;
         case 4:
-            fit = new TF1("fit", "[0]*(1+2*([1]*cos(2*x*(pi/180.0))+[2]*cos(3*x*(pi/180.0))+[3]*cos(4*x*(pi/180.0))))");
-            fit->SetParNames(A, coef++"2", coef++"3", coef++"4");
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0))+2*[3]*cos(4*x*(pi/180.0)))");
+            fit->SetParNames("A", coef+"2", coef+"3", coef+"4");
             fit->SetParameters(1.0, 0.0, 0.0, 0.0);
             break;
     }
