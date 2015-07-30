@@ -110,14 +110,14 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
                 means->Draw(varexp, cutexp, "goff");
                 if (TString(means->GetName()).Contains("x_j")) {
-                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "x_j");
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "x_j", true);
                     SetRange(gr, .005);
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     DrawLegend(gr, fit, TString::Format("Centrality=%.1f%%, DE=%.1f GeV", 100*ImpactToBin(b), DE));
                     //DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE));
                 }
                 else {
-                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "A_j");
+                    gr = DrawGraphFit(means, fit, "Dijet Asymmetry", "#phi", "A_j", true);
                     //gr->GetYaxis()->SetRangeUser(gr->GetMinimum()-.01, gr->GetMaximum()+.01);
                     SetRange(gr, .005);
                     DrawLegend(gr, fit, TString::Format("Centrality=%.1f%%, DE=%.1f GeV", 100*ImpactToBin(b), DE), 0.15, .4, 0.7, 0.9);
@@ -155,7 +155,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     TString histname;
     TString savename;
     TF1* fit;
-    TGraph* gr;
+    TGraphErrors* gr;
     while ((key = (TKey*)next())) {
         RAA = (TNtuple*)f->Get(key->GetName());
         DE = ParseParameter(key->GetName(), "DE=");
@@ -167,7 +167,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
                 RAA->Draw(varexp, cutexp, "goff");
-                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA"); 
+                gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA", false); 
                 DrawLegend(gr, fit, TString::Format("b=%.1f fm, pt=%.1f GeV", b, pt));
                 SetRange(gr, .005);
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
@@ -211,32 +211,39 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xma
 }
 
 void DrawGraphFit(TGraphErrors* gr, TF1* fit, TString title, TString xTitle, TString yTitle) {
-gr->Draw();
-gr->SetMarkerColor(4);
-gr->SetMarkerStyle(9);
-gr->SetMarkerSize(.5);
-gr->Fit(fit, "Q", "AP");
-gr->SetTitle(title);
-gr->GetXaxis()->SetTitle(xTitle);
-gr->GetYaxis()->SetTitle(yTitle);
-gr->GetXaxis()->CenterTitle();
-gr->GetYaxis()->CenterTitle();
-gr->Draw("AP");
+    gr->Draw();
+    gr->SetMarkerColor(4);
+    gr->SetMarkerStyle(9);
+    gr->SetMarkerSize(.5);
+    gr->Fit(fit, "Q", "AP");
+    gr->SetTitle(title);
+    gr->GetXaxis()->SetTitle(xTitle);
+    gr->GetYaxis()->SetTitle(yTitle);
+    gr->GetXaxis()->CenterTitle();
+    gr->GetYaxis()->CenterTitle();
+    gr->Draw("AP");
 }
 
-TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle) {
-//tuple convention for x, y ordering opposite to TGraph convention
-TGraphErrors* gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, ntuple->GetV3());
-DrawGraphFit(gr, fit, title, xTitle, yTitle);
-return gr;
+TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTitle, TString yTitle, Bool_t means) {
+    //tuple convention for x, y ordering opposite to TGraph convention
+    TGraphErrors* gr;
+    if (means) {
+        gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, ntuple->GetV3());
+    }
+    else {
+        //May need to change, but currently not using errors for RAA calc
+        gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, 0);
+    }
+    DrawGraphFit(gr, fit, title, xTitle, yTitle);
+    return gr;
 }
 
 void SetRange(TGraph* gr, Double_t buf) {
-Double_t xmin, ymin, xmax, ymax;
-gr->ComputeRange(xmin, ymin, xmax, ymax);
-//cout << "xmin: " << xmin << ", ymin: " << ymin << ", xmax: " << xmax << ", ymax: " << ymax << endl;
-cout << buf << endl;
-gr->GetYaxis()->SetRangeUser(ymin-buf, ymax+buf);
+    Double_t xmin, ymin, xmax, ymax;
+    gr->ComputeRange(xmin, ymin, xmax, ymax);
+    //cout << "xmin: " << xmin << ", ymin: " << ymin << ", xmax: " << xmax << ", ymax: " << ymax << endl;
+    cout << buf << endl;
+    gr->GetYaxis()->SetRangeUser(ymin-buf, ymax+buf);
 }
 
 //omits first order fourier harmonic, but nharmonics counts as if it is included. i.e. nharmonics = 2 corresponds to including 2*cos(2x)
