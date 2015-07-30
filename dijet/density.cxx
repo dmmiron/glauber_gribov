@@ -431,6 +431,25 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     return ratio;
 }
 
+Double_t Collision::CalcL(Double_t x, Double_t y, Double_t phi) {
+    Double_t alpha = 0;
+    Double_t integral = JetIntegral(alpha, x, y, phi);
+    TF1* rho = CalcJetIntegrand(alpha, x, y, phi);
+    Double_t L = integral/(rho->Eval(0));
+    return L;
+}
+/* NEEDS TO BE WRITTEn
+Double_t Collision::Calc_qHat() {
+}
+*/
+/*
+Double_t Collision::CalcOmegac(Double_t x, Double_t y, Double_t phi) {
+    Double_t L = CalcL(x, y, phi);
+    Double_t q_hat = Calc_qHat();
+    return L*L*q/2.0;
+}
+*/
+
 //Calculate an adjustment coefficent to make the ratio of quarks to gluons correct at the refernce Pt value
 //we chose to multiply the gluon distribution
 Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
