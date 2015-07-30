@@ -249,12 +249,12 @@ TF1* CosFitFunc(TString coef, Int_t nharmonics) {
             fit->SetParameters(1.0, 0.0);
             break;
         case 3:
-            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+3*[2]*cos(3*x*(pi/180.0)))");
+            fit = new TF1("fit", "[0]*(1+2*([1]*cos(2*x*(pi/180.0))+[2]*cos(3*x*(pi/180.0))))");
             fit->SetParNames("A", coef++"2", coef++"3");
             fit->SetParameters(1.0, 0.0, 0.0);
             break;
         case 4:
-            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+3*[2]*cos(3*x*(pi/180.0))+4*[3]*cos(4*x*(pi/180.0)))");
+            fit = new TF1("fit", "[0]*(1+2*([1]*cos(2*x*(pi/180.0))+[2]*cos(3*x*(pi/180.0))+[3]*cos(4*x*(pi/180.0))))");
             fit->SetParNames(A, coef++"2", coef++"3", coef++"4");
             fit->SetParameters(1.0, 0.0, 0.0, 0.0);
             break;
