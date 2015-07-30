@@ -15,9 +15,9 @@ void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, 
 
 TString StripString(TString s, TString remove);
 
-void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor);
+void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, Int_t nharmonics=4);
 
-void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Double_t maxPt, Double_t pt_step);
+void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Double_t maxPt, Double_t pt_step, Int_t nharmonics=4);
 
 void DrawGraphFit(TGraph* gr, TF1* fit, TString title, TString xTitle, TString yTitle);
 
@@ -27,6 +27,6 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin=0.6, Double_t
 
 void SetRange(TGraph* gr, Double_t buf);
 
-TF1* CosFitFunc(TString coef0="A", TString coef1="c2");
+TF1* CosFitFunc(TString coef="c", Int_t nharmonics=4);
 
 #endif

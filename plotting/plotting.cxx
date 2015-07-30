@@ -81,7 +81,7 @@ TString StripString(TString s, TString remove) {
     return out;
 }
 
-void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
+void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, Int_t nharmonics) {
     gROOT->SetBatch(kTRUE);
     TCanvas* c;
     TFile* f = TFile::Open(filename);
@@ -102,7 +102,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
         means = (TNtuple*)f->Get(key->GetName());
         for (DE = 0.0; DE<15; DE++) {
             for (b=0.0; b<15; b++) {
-                fit = CosFitFunc("A", "c2");
+                fit = CosFitFunc("c", nharmonics);
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
                 histname = TString::Format("b%.1f_DE%.1f", b, DE);
@@ -121,7 +121,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
                 }
                 //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
                 fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
-                savename = TString::Format("%s_%s_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, b, DE);
+                savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, nharmonics, b, DE);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
             }
@@ -134,7 +134,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor) {
     gROOT->SetBatch(kFALSE);
 }
 
-void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Double_t maxPt, Double_t pt_step) {
+void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Double_t maxPt, Double_t pt_step, Int_t nharmonics) {
     gROOT->SetBatch(kTRUE);
     TCanvas* c;
     TFile* f = TFile::Open(filename);
@@ -156,7 +156,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
         for (Double_t b=0; b<15; b++) {
             pt = minPt;
             while (pt < maxPt) {
-                fit = CosFitFunc("A", "v2");
+                fit = CosFitFunc("v", nharmonics);
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
@@ -167,7 +167,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
                 fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
-                savename = TString::Format("%s_%s_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), b, pt);
+                savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), nharmonics, b, pt);
                 c->SaveAs(save_dir + "/" + savename);
                 c->Close();
                 pt += pt_step;
@@ -227,10 +227,25 @@ void SetRange(TGraph* gr, Double_t buf) {
     gr->GetYaxis()->SetRangeUser(ymin-buf, ymax+buf);
 }
 
-TF1* CosFitFunc(TString coef0, TString coef1) {
-    //2*x is for second fourier term
-    TF1* fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
-    fit->SetParNames(coef0, coef1);
-    fit->SetParameters(1.0, 0.0);
+//omits first order fourier harmonic, but nharmonics counts as if it is included. i.e. nharmonics = 2 corresponds to including 2*cos(2x)
+TF1* CosFitFunc(TString coef, Int_t nharmonics) {
+    TF1* fit;
+    switch (nharmonics) {
+        case 2:
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
+            fit->setParNames("A", coef ++ "2");
+            fit->SetParameters(1.0, 0.0);
+            break;
+        case 3:
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+3*[2]*cos(3*x*(pi/180.0)))");
+            fit->SetParNames("A", coef++"2", coef++"3");
+            fit->SetParameters(1.0, 0.0, 0.0);
+            break;
+        case 4:
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+3*[2]*cos(3*x*(pi/180.0))+4*[3]*cos(4*x*(pi/180.0)))");
+            fit->SetParNames(A, coef++"2", coef++"3", coef++"4");
+            fit->SetParameters(1.0, 0.0, 0.0, 0.0);
+            break;
+    }
     return fit;
 }
