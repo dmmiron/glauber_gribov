@@ -103,7 +103,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
         for (DE = 0.0; DE<15; DE++) {
         //for (DE = 5.0; DE<6; DE++) {
             for (b=0.0; b<15; b++) {
-            //for (b=9.0; b<10; b++) {
+            //for (b=8.0; b<9; b++) {
                 fit = CosFitFunc("c", nharmonics);
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && DE==%.1f", b, DE);
@@ -160,6 +160,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
         RAA = (TNtuple*)f->Get(key->GetName());
         DE = ParseParameter(key->GetName(), "DE=");
         for (Double_t b=0; b<15; b++) {
+        //for (Double_t b=8; b<9; b++) {
             pt = minPt;
             while (pt < maxPt) {
                 fit = CosFitFunc("v", nharmonics);
@@ -251,17 +252,20 @@ TF1* CosFitFunc(TString coef, Int_t nharmonics) {
     TF1* fit;
     switch (nharmonics) {
         case 2:
-            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
+            //fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0)))");
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x))");
             fit->SetParNames("A", coef + "2");
             fit->SetParameters(1.0, 0.0);
             break;
         case 3:
-            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0)))");
+            //fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0)))");
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x)+2*[2]*cos(3*x))");
             fit->SetParNames("A", coef+"2", coef+"3");
             fit->SetParameters(1.0, 0.0, 0.0);
             break;
         case 4:
-            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0))+2*[3]*cos(4*x*(pi/180.0)))");
+            //fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x*(pi/180.0))+2*[2]*cos(3*x*(pi/180.0))+2*[3]*cos(4*x*(pi/180.0)))");
+            fit = new TF1("fit", "[0]*(1+2*[1]*cos(2*x)+2*[2]*cos(3*x)+2*[3]*cos(4*x))");
             fit->SetParNames("A", coef+"2", coef+"3", coef+"4");
             fit->SetParameters(1.0, 0.0, 0.0, 0.0);
             break;
