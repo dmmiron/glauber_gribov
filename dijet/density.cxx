@@ -438,7 +438,7 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
 void Collision::SetRAAErrors(TH1* ratio, TH1* numerator) {
     Double_t error;
     for (Int_t bin = 0; bin < numerator->GetNbinsX(); bin++) {
-        error = TMath::Sqrt(numerator->GetBinContent(bin));
+        error = 1/TMath::Sqrt(numerator->GetBinContent(bin));
         ratio->SetBinError(bin, error);
     } 
 }
