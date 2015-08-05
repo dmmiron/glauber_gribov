@@ -390,6 +390,7 @@ TH1* Collision::SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Do
     TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
     TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
     quot->Divide(difference, unquenched);
+    SetRAAErrors(quot, difference);
     delete unquenched;
     delete difference;
     return quot;
@@ -413,10 +414,13 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
     cout << "before q_ratio" << endl;
     q_ratio->Divide(differenceQuark, unquenchedQuark);
+    SetRAAErrors(q_ratio, differenceQuark);
     cout << "before g_ratio" << endl;
     g_ratio->Divide(differenceGluon, unquenchedGluon);
+    SetRAAErrors(g_ratio, differenceGluon);
     cout << "before ratio" << endl;
     ratio->Divide(numerator, denominator);
+    SetRAAErrors(ratio, numerator);
     q_ratio->Write();
     g_ratio->Write();
 
@@ -431,6 +435,15 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     return ratio;
 }
 
+void Collision::SetRAAErrors(TH1* ratio, TH1* numerator) {
+    Double_t error;
+    for (Int_t bin = 0; bin < numerator->GetNbinsX(); bin++) {
+        error = TMath::Sqrt(numerator->GetBinContent(bin));
+        ratio->SetBinError(bin, error);
+    } 
+}
+
+
 Double_t Collision::CalcL(Double_t x, Double_t y, Double_t phi) {
     Double_t alpha = 0;
     Double_t integral = JetIntegral(alpha, x, y, phi);
@@ -438,17 +451,48 @@ Double_t Collision::CalcL(Double_t x, Double_t y, Double_t phi) {
     Double_t L = integral/(rho->Eval(0));
     return L;
 }
-/* NEEDS TO BE WRITTEn
-Double_t Collision::Calc_qHat() {
-}
-*/
-/*
-Double_t Collision::CalcOmegac(Double_t x, Double_t y, Double_t phi) {
+
+//qhat*L
+Double_t Collision::CalcOmegac(Double_t qhatL, Double_t x, Double_t y, Double_t phi) {
     Double_t L = CalcL(x, y, phi);
-    Double_t q_hat = Calc_qHat();
-    return L*L*q/2.0;
+    return L*qhatL/2.0;
 }
-*/
+
+//D(epsilon) distribution (equation 22 in quenching in media paper)
+TF1* GetEnergyLossDist(Double_t alpha, Double_t omegac) {
+    TF1* energyLossDist = new TF1("energyLossDist", "([0]/x)*TMath::Sqrt([1]/(2*x))*TMath::Exp(-TMath::Pi()*[0]*[0]*[1]/(2*x))", 0, INFTY);
+    energyLossDist->SetParameters(alpha, omegac);
+    return energyLossDist;
+}
+
+TF1* GetEnergyLossDist(Double_t alpha, Double_t L, Double_t qhat) {
+    return GetEnergyLossDist(alpha, CalcOmegac(L, qhat));
+}
+
+Double_t GetEnergyLossMean(Double_t alpha, Double_t omegac, Double_t maxJetEnergy) {
+    TF1* energyLossDist = GetEnergyLossDist(alpha, omegac);
+    return energyLossDist->Mean(0, maxJetEnergy);
+}
+
+Double_t GetEnergyLossMean(Double_t alpha, Double_t L, Double_t qhat, Double_t maxJetEnergy) {
+    return GetEnergyLossMean(alpha, CalcOmegac(L, qhat), maxJetEnergy);
+}
+
+TF1* EnergyLossMeanFunc(Double_t alpha, Double_t omegac) {
+    MeanFunc* intg = new MeanFunc(GetEnergyLossDist(alpha, omegac));
+    TF1* meanFunc = new TF1("energyLossMean", intg, 0, INFTY, 2, "intg");
+    meanFunc->SetParameters(alpha, omegac);
+    return meanFunc;
+}
+
+TF1* EnergyLossMeanFunc(Double_t alpha, Double_t L, Double_t qhat) {
+    return EnergyLossMeanFunc(alpha, CalcOmegac(L, qhat));
+}
+
+Double_t CalcOmegac(Double_t L, Double_t qhat) {
+    return L*L*qhat/2.0;
+}
+
 
 //Calculate an adjustment coefficent to make the ratio of quarks to gluons correct at the refernce Pt value
 //we chose to multiply the gluon distribution
@@ -466,4 +510,5 @@ Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
     delete ratio;
     return gCoef;
 }
+
 

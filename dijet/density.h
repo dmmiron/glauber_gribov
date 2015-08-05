@@ -86,6 +86,7 @@ class Collision {
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
         Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
+        void        SetRAAErrors(TH1* ratio, TH1* numerator);
 
     public:
         Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
@@ -119,7 +120,7 @@ class Collision {
         TH1*        QGSpectraRatio(Int_t n_samples=10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quarkFrac=0.34);
         Double_t    CalcL(Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
         //Double_t    Calc_qHat();
-        //Double_t    CalcOmegac(Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
+        Double_t    CalcOmegac(Double_t qhatL, Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
 };
 
         
@@ -137,11 +138,21 @@ struct MyIntegFunc {
     MyIntegFunc(TF1 *f): fFunc(f) {}
     Double_t operator() (Double_t *x, Double_t *par) const {
         Double_t a = fFunc->GetXmin();
+        cout << a << endl;
         return fFunc->Integral(a, *x, EPSILON);
     }
     TF1 *fFunc;
 };
 
+struct MeanFunc {
+    MeanFunc(TF1* f): fFunc(f) {}
+    Double_t operator() (Double_t *x, Double_t *par) const {
+        Double_t a = fFunc->GetXmin();
+        fFunc->SetParameters(par);
+        return fFunc->Mean(a, *x);
+    }
+    TF1* fFunc;
+};
 //Functor for calculating Thickness as a function of b (impact parameter)
 // when integrand is a function of r and needs to be integrated wrt z
 struct ThicknessFunc {
@@ -274,6 +285,16 @@ struct RhoJet {
 Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100); 
 
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100);
+
+TF1* GetEnergyLossDist(Double_t alpha, Double_t omegac);
+
+TF1* GetEnergyLossDist(Double_t alpha, Double_t L, Double_t qhat);
+
+Double_t GetEnergyLossMean(Double_t alpha, Double_t omegac, Double_t maxJetEnergy);
+
+Double_t GetEnergyLossMean(Double_t alpha, Double_t L, Double_t qhat, Double_t maxJetEnergy);
+
+Double_t CalcOmegac(Double_t L, Double_t qhat);
 
 Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE=25.0);
 #endif
