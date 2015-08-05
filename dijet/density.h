@@ -86,6 +86,7 @@ class Collision {
         Double_t    CalcSA(Double_t x, Double_t y);
         Double_t    CalcSB(Double_t x, Double_t y);
         Double_t    JetIntegral(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
+        void        SetRAAErrors(TH1* ratio, TH1* numerator);
 
     public:
         Collision(Double_t iR0=6.62, Double_t iMu=.546, Double_t iB=0);
