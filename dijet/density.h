@@ -20,7 +20,7 @@ const Double_t EPSILON = pow(10, -7);
 const Double_t GLUON_RATIO = 9.0/4.0; //ratio of gluon energy suppression to quark energy suppression
 const Double_t CROSS_SECTION = 7.7; //barnes
 
-const Double_t SAMPLE_COEF = 1.5;
+const Double_t SAMPLE_COEF = 1.2;
 
 const Int_t QUARK_QUARK = 0;
 const Int_t QUARK_GLUON = 1; 

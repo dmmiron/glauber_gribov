@@ -97,7 +97,8 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
     TString savename;
     TF1* fit;
     TGraphErrors* gr;
-    TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
+    //TNtuple* fitResults = new TNtuple(flavor, "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf");
+    TNtuple* fitResults = CreateResultsTupleAsymmetry(nharmonics);
     while ((key = (TKey*)iter.Next())) {
         means = (TNtuple*)f->Get(key->GetName());
         for (DE = 0.0; DE<15; DE++) {
@@ -124,7 +125,8 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
                     //DrawLegend(gr, fit, TString::Format("b=%.1f fm, DE=%.1f GeV", b, DE), 0.15, .4, 0.7, 0.9);
                 }
                 //means->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX");
-                fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
+                //fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetChisquare(), fit->GetNDF());
+                FillResultsTupleAsymmetry(fitResults, fit, nharmonics, b, DE); 
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_DE=%.1f.pdf", means->GetName(), (const char*)flavor, nharmonics, b, DE);
                 c->SaveAs(save_dir + "/" + savename);
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_DE=%.1f.root", means->GetName(), (const char*)flavor, nharmonics, b, DE);
@@ -133,7 +135,8 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
             }
         }
     }
-    TFile* outfile = TFile::Open(save_dir + "/asymmetry_results_fit.root", "recreate");
+    savename = TString::Format("/asymmetry_results_fit_nharmonics=%d.root", nharmonics);
+    TFile* outfile = TFile::Open(save_dir + savename, "recreate");
     fitResults->Write();
     outfile->Close();
     f->Close();
@@ -148,7 +151,8 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     TKey* key;
     TIter next(keys);
     TNtuple* RAA;
-    TNtuple* fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisq:ndf");
+    //TNtuple* fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisq:ndf");
+    TNtuple* fitResults = CreateResultsTupleRAA(nharmonics);
     Double_t b, pt, DE;
     TString varexp = "RAA:pi*phi/180.0";
     TString cutexp;
@@ -173,7 +177,8 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 SetRange(gr, .005);
                 //SHOULD BE ABLE TO FIX DRAWING OPTIONS
                 //RAA->Fit(fit->GetName(), varexp+">>"+histname+"_"+key->GetName(), cutexp, "QBOX"); 
-                fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
+                //fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetChisquare(), fit->GetNDF());
+                FillResultsTupleRAA(fitResults, fit, nharmonics, b, pt, DE);
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_pt=%.1f.pdf", RAA->GetName(), RAA->GetTitle(), nharmonics, b, pt);
                 c->SaveAs(save_dir + "/" + savename);
                 savename = TString::Format("%s_%s_nharmonics=%d_b=%.1f_pt=%.1f.root", RAA->GetName(), RAA->GetTitle(), nharmonics, b, pt);
@@ -183,13 +188,71 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
             }
         }
     }
-    
-    TFile* outfile = TFile::Open(save_dir + "/RAA_fit_results.root", "recreate");
+    savename = TString::Format("/RAA_fit_results_nharmonics=%d.root", nharmonics); 
+    TFile* outfile = TFile::Open(save_dir + savename, "recreate");
     fitResults->Write();
     outfile->Close();
     f->Close();
     
     gROOT->SetBatch(kFALSE);
+}
+
+TNtuple* CreateResultsTupleRAA(Int_t nharmonics) {
+    TNtuple* fitResults;
+    switch (nharmonics) {
+        case 2:
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisquare:ndf:chisqPerNDF");
+            break;
+        case 3:
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:v3:chisquare:ndf:chisqPerNDF");
+            break;
+        case 4:
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:v3:v4:chisquare:ndf:chisqPerNDF");
+            break;
+    }
+    return fitResults;
+}
+
+TNtuple* CreateResultsTupleAsymmetry(Int_t nharmonics) {
+    TNtuple* fitResults;
+    if (nharmonics == 2) {
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf:chisqPerNDF");
+    }
+    else if (nharmonics == 3) {
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:c3:chisquare:ndf:chisqPerNDF");
+    }
+    else if (nharmonics == 4) {
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:c3:c4:chisquare:ndf:chisqPerNDF");
+    }
+    return fitResults;
+}
+
+void FillResultsTupleRAA(TNtuple* fitResults, TF1* fit, Int_t nharmonics, Double_t b, Double_t pt, Double_t DE) {
+    Double_t chisq = fit->GetChisquare();
+    Double_t ndf = fit->GetNDF();
+    if (nharmonics == 2) {
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), chisq, ndf, chisq/ndf);
+    }
+    else if (nharmonics == 3) {
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetParameter("v3"), chisq, ndf, chisq/ndf);
+    }
+    else if (nharmonics == 4) {
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetParameter("v3"), fit->GetParameter("v4"), chisq, ndf, chisq/ndf);
+    } 
+}
+
+void FillResultsTupleAsymmetry(TNtuple* fitResults, TF1* fit, Int_t nharmonics, Double_t b, Double_t DE) {
+    Double_t chisq = fit->GetChisquare();
+    Double_t ndf = fit->GetNDF();
+    if (nharmonics == 2) {
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), chisq, ndf, chisq/ndf);
+    }
+    else if (nharmonics == 3) {
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetParameter("c3"), chisq, ndf, chisq/ndf);
+    }
+    else if (nharmonics == 4) {
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetParameter("c3"), fit->GetParameter("c4"), chisq, ndf, chisq/ndf);
+    } 
 }
 
 void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax) {
