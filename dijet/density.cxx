@@ -309,6 +309,8 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     start = clock();
     last = start; 
     */
+    //make all new histograms automatically call sumw2
+    TH1::SetDefaultSumw2();
     TH1* h = new TH1F(TString::Format("DifferenceSpectrum%.2f", n), "Difference", maxPt, 0, maxPt);
     Double_t difference;
     TH1* unquenched = Unquenched(minPt, n, beta);
@@ -350,6 +352,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
 }
 
 TH1* Collision::SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Double_t beta){
+    TH1::SetDefaultSumw2();
     TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", 100, 0, 100);
     TH1* unquenched = Unquenched(minPt, n, beta);
     for (Int_t i = 0; i < n_samples; i++) {
@@ -360,6 +363,7 @@ TH1* Collision::SampleUnquenched(Int_t n_samples, Double_t minPt, Double_t n, Do
 }
 
 TH1* Collision::SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta) {
+    TH1::SetDefaultSumw2();
     TH1* h = new TH1F(TString::Format("Unquenched%.2f", n), "Unquenched", maxPt, 0, maxPt);
     TH1* temp = new TH1F("temp", "temp", maxPt, 0, maxPt);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
@@ -385,18 +389,19 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t 
 }
         
 TH1* Collision::SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization) {
+    TH1::SetDefaultSumw2();
     TH1* unquenched = SampleUnquenchedSplit(n_samples, minPt, maxPt, n, beta);
     TH1* difference = DifferenceSpectrum(n_samples, minPt, maxPt, n, beta, jets, normalization);
     TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
     TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
     quot->Divide(difference, unquenched);
-    SetRAAErrors(quot, difference);
     delete unquenched;
     delete difference;
     return quot;
 }
 
 TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
+    TH1::SetDefaultSumw2();
     TH1* unquenchedQuark = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_quark, beta_quark);
     TH1* unquenchedGluon = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_gluon, beta_gluon);
     TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, normalization);
@@ -414,13 +419,10 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
     cout << "before q_ratio" << endl;
     q_ratio->Divide(differenceQuark, unquenchedQuark);
-    SetRAAErrors(q_ratio, differenceQuark);
     cout << "before g_ratio" << endl;
     g_ratio->Divide(differenceGluon, unquenchedGluon);
-    SetRAAErrors(g_ratio, differenceGluon);
     cout << "before ratio" << endl;
     ratio->Divide(numerator, denominator);
-    SetRAAErrors(ratio, numerator);
     q_ratio->Write();
     g_ratio->Write();
 
