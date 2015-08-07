@@ -808,7 +808,7 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
     vector<TFile*> fs;
     TString key= TString::Format("%s_DE=%.2f", (const char*)flavor, deltaE);
     TH1* spectrum;
-    TNtuple* out = new TNtuple(key, "Single_Jet_RAA", "b:phi:pt:RAA");
+    TNtuple* out = new TNtuple(key, "Single_Jet_RAA", "b:phi:pt:RAA:err");
     Double_t pt;
     Double_t b;
     Double_t phi;
@@ -824,13 +824,26 @@ TNtuple* CalcRAATuple(TString dirname, Double_t minPt, Double_t maxPt, Double_t 
             pt = minPt;
             while (pt < maxPt) {
                 bin = spectrum->GetBin(pt);
-                out->Fill(b, phi, pt, spectrum->GetBinContent(bin));
+                out->Fill(b, phi, pt, spectrum->GetBinContent(bin), spectrum->GetBinError(bin));
                 pt += pt_step;
             }
         }
     }
     CloseFiles(fs);
     return out;
+}
+
+void MakeAndSaveRAATuples(TString inputdir, TString outdir, Double_t minPt, Double_t maxPt, Double_t pt_step, Double_t minDE, Double_t maxDE, Double_t DE_step, TString flavor) {
+    TNtuple* raaTuple;
+    Double_t DE = minDE;
+    TFile *f;
+    while (DE < maxDE) {
+        raaTuple = CalcRAATuple(inputdir, minPt, maxPt, pt_step, DE, flavor);
+        f = TFile::Open(outdir + TString::Format("/raa_tuple_DE=%.1f.root", DE), "recreate");
+        raaTuple->Write();
+        f->Close();
+        DE += DE_step;
+    }
 }
 
 void CloseFiles(vector<TFile*> fs) {
