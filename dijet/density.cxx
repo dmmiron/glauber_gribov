@@ -203,28 +203,26 @@ TF2* Collision::CalcRhoJet() {
     return rhoJet;
 }
 
-pair<Double_t, Double_t> Collision::SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) { //clock_t t;
-    //t = clock();
+vector<Double_t> Collision::SampleJet(Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) { 
+    vector<Double_t> out;
     Double_t x;
     Double_t y;
-    //cout << "SetRange: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     fRhoJet->GetRandom2(x, y);
-    //cout << fRhoJet->GetNpx() << "Npx " << fRhoJet->GetNpy() << "Npy " << endl;
-    //cout << "GetRandom2: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
     TF1* uniform = new TF1("uniform", "1", 0, 360);
-    //cout << "uniform: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
-    //ask about how we should generate this value since it's just uniform (do we want seed transparency?)
     Double_t phi = uniform->GetRandom();
-    //for testing
-    //phi = 45.0;
-    //cout << "phi: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl;
-    Double_t out = JetIntegral(alpha, x, y, phi);
-    //cout << "timing SampleJet Inside func: " << ((float)(clock()-t))/CLOCKS_PER_SEC << endl; 
-    return make_pair(out, phi);
+    Double_t loss = JetIntegral(alpha, x, y, phi);
+    Double_t rho0;
+    out.push_back(loss);
+    out.push_back(x);
+    out.push_back(y);
+    out.push_back(phi);
+    out.push_back(Rho0(x, y));
+    return out;
 }
 
 //Convention is phi outside of range [0, 360) means choose uniformly
-pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+vector<Double_t> Collision::SampleJetPair(Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    vector<Double_t> out;
     Double_t x;
     Double_t y;
     fRhoJet->GetRandom2(x, y);
@@ -235,54 +233,63 @@ pair<Double_t, Double_t> Collision::SampleJetPair(Double_t alpha, Double_t phi, 
     }
     Double_t jet1 = JetIntegral(alpha, x, y, phi);
     Double_t jet2 = JetIntegral(alpha, x, y, phi+180);
-    return make_pair(jet1, jet2);
+    out.push_back(jet1);
+    out.push_back(jet2);
+    out.push_back(x);
+    out.push_back(y);
+    out.push_back(phi);
+    out.push_back(Rho0(x,y));
+    return out;
 }
 
 
-TH1* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
-    //clock_t start;
-    //clock_t last; 
-    //start = clock();
-    //last = start;
-    //cout << "timing..." << endl;
-    TH1F* h = new TH1F("Jets", "Sampled Jets", 100, 0, 50);
+TNtupleD* Collision::SampleJets(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    //TH1F* h = new TH1F("Jets", "Sampled Jets", 100, 0, 50);
+    TNtupleD* tup = new TNtupleD("Jets_Tuple", "Sampled_Jets", "loss:x:y:phi:rho0");
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
+    vector<Double_t> sample;
+    Double_t* samplep; //used to convert vector to double* so we can pass to tup->Fill (works since vectors required to store results contiguously BUT IS DANGEROUS)
     for (int i = 0; i < n; i++) {
-        h->Fill(SampleJet(alpha, xmin, ymin, xmax, ymax).first);
+        sample = SampleJet(alpha, xmin, ymin, xmax, ymax);
+        samplep = &sample[0];
+        tup->Fill(samplep);
+        
+        //h->Fill(sample[0]);
         if (i % 500 == 0) {
             cout << i << " jets sampled" << endl;
         }
-        //cout << "Jet took: " << ((float)(clock()-last))/CLOCKS_PER_SEC << endl;
-        //last = clock();
-        //cout << ((float)(clock()-start))/CLOCKS_PER_SEC << " total time so far" << endl;
     }
-    return h;
+    return tup;
 }
 
 //phi outside of [0, 360] means uniform sampling
-TH2* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
-    TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", phi), 100, 0, 50, 100, 0, 50);
+TNtupleD* Collision::SampleJetsPaired(Int_t n, Double_t alpha, Double_t phi, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
+    //TH2F* h = new TH2F("JetPairs", TString::Format("Sampled Jets Pairs_%.2f", phi), 100, 0, 50, 100, 0, 50);
+    TNtupleD* tup = new TNtupleD("Jet_Pairs_Tuple", "Sampled_Jet_Pairs", "loss1:loss2:x:y:phi:rho0");
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
-    pair<Double_t, Double_t> jets; 
+    vector<Double_t> jets; 
+    Double_t* jetsp;
     for (int i = 0; i < n; i++) {
         jets = SampleJetPair(alpha, phi, xmin, ymin, xmax, ymax);
-        h->Fill(jets.first, jets.second);
+        jetsp = &jets[0];
+        //h->Fill(jets[0], jets[1]);
+        tup->Fill(jetsp);
         if (i % 500 == 0) {
             cout << i << " jet pairs sampled" << endl;
         }
     }
-    return h;
+    return tup;
 }
 
-
+//DEPRECATED
 TH2* Collision::SampleJetsPhi(Int_t n, Double_t alpha, Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax) {
     //x value stores E, y value stores phi
     TH2F* h = new TH2F("Jets_Phi_n", "Sampled Jets", 200, 0, 100, 360, 0, 360);
     fRhoJet->SetRange(xmin,ymin, xmax, ymax);
-    pair<Double_t, Double_t> result;
+    vector<Double_t> result;
     for (int i = 0; i < n; i++) {
         result = SampleJet(alpha, xmin, ymin, xmax, ymax);
-        h->Fill(result.first, result.second);
+        h->Fill(result[0], result[3]);
     } 
     return h;
 }
@@ -303,12 +310,6 @@ TF1* Collision::UnquenchedTF(Double_t minPt, Double_t n, Double_t beta) {
 
 TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t normalization) {
     //n is number of samples per SECTION
-    /*
-    clock_t start;
-    clock_t last;
-    start = clock();
-    last = start; 
-    */
     //make all new histograms automatically call sumw2
     TH1::SetDefaultSumw2();
     TH1* h = new TH1F(TString::Format("DifferenceSpectrum%.2f", n), "Difference", maxPt, 0, maxPt);
@@ -334,7 +335,66 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
                 difference = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt)-(jets->GetRandom())*normalization;
             }
             else {
-                difference = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt)-(SampleJet().first)*normalization;
+                difference = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt)-(SampleJet()[0])*normalization;
+            }
+            if (difference>0) {
+                temp->Fill(difference);
+                count++;
+            }
+        }
+        count = 0;
+        h->Add(temp, scale);
+        temp->Reset();
+        startPt = startPt*SAMPLE_COEF;
+    }
+    delete unquenched;
+    delete temp;
+    return h;
+}
+
+TH1* Collision::DifferenceSpectrumPaper(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t qhatL) {
+    //n is number of samples per SECTION
+    //make all new histograms automatically call sumw2
+    TH1::SetDefaultSumw2();
+    TH1* h = new TH1F(TString::Format("DifferenceSpectrum%.2f", n), "Difference", maxPt, 0, maxPt);
+    Double_t difference;
+    TH1* unquenched = Unquenched(minPt, n, beta);
+    TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
+    TH1* temp;  
+    Double_t scale;
+    Int_t count = 0;
+    Double_t startPt = minPt;
+    Double_t exp;
+    Double_t normalization;
+    Double_t omegac;
+    //renormalize deltaE distribution
+    //note fixing this from calculating the mean from a new sample every time should be a major speed increase
+
+    temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
+    Double_t unquenchedE;
+    Double_t energyLoss;
+    vector<Double_t> jetv;
+    while (startPt < maxPt) { 
+        scale = unquenchedTF->Integral(startPt,SAMPLE_COEF*startPt)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
+        while (count < n_samples) {
+            unquenchedE = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt);
+            if (jets!=0) {
+                //temporary values of x, y, phi
+                //CalcOmegac(qhatL, x, y, phi);
+                omegac = CalcOmegac(qhatL, 0, 0, 0); 
+                normalization = GetEnergyLossMean(ALPHA, omegac, unquenchedE); 
+                //normalization = SampleEnergyLoss(ALPHA, omegac, unquenchedE);
+
+                difference = unquenchedE - normalization*(jets->GetRandom());
+            }
+            else {
+                //call Sample Jet
+                //unpack x, y, phi, energyloss
+                jetv = SampleJet();
+                energyLoss = jetv[0]; 
+                omegac = CalcOmegac(qhatL, jetv[1], jetv[2], jetv[3]);
+                normalization = GetEnergyLossMean(ALPHA, omegac, unquenchedE);
+                difference = unquenchedE - normalization*energyLoss;
             }
             if (difference>0) {
                 temp->Fill(difference);
@@ -445,8 +505,16 @@ void Collision::SetRAAErrors(TH1* ratio, TH1* numerator) {
     } 
 }
 
+Double_t Collision::Rho0(Double_t x, Double_t y) {
+    Double_t alpha=0;
+    Double_t phi=0;
+    //Since we only want the value of rho at the starting point of integration phi is irrelevant, and alpha should be 0
+    TF1* rho = CalcJetIntegrand(alpha, x, y, phi);
+    return rho->Eval(0);
+}
 
 Double_t Collision::CalcL(Double_t x, Double_t y, Double_t phi) {
+    //for calculating L always want integral rho dl (no higher powers of l)
     Double_t alpha = 0;
     Double_t integral = JetIntegral(alpha, x, y, phi);
     TF1* rho = CalcJetIntegrand(alpha, x, y, phi);
@@ -458,6 +526,12 @@ Double_t Collision::CalcL(Double_t x, Double_t y, Double_t phi) {
 Double_t Collision::CalcOmegac(Double_t qhatL, Double_t x, Double_t y, Double_t phi) {
     Double_t L = CalcL(x, y, phi);
     return L*qhatL/2.0;
+}
+
+Double_t SampleEnergyLoss(Double_t alpha, Double_t omegac, Double_t maxEnergy) {
+    TF1* dist = GetEnergyLossDist(alpha, omegac);
+    dist->SetRange(0, maxEnergy);
+    return dist->GetRandom();
 }
 
 //D(epsilon) distribution (equation 22 in quenching in media paper)
