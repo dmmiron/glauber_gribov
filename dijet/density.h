@@ -9,6 +9,8 @@ class Collision;
 #include <TF2.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TNtuple.h>
+#include <TNtupleD.h>
 #include <TFile.h>
 #include <TString.h>
 #include <limits>
@@ -32,6 +34,7 @@ const Int_t GLUON = 1;
 const Int_t FLAVORS [4] = {QUARK_QUARK, QUARK_GLUON, GLUON_QUARK, GLUON_GLUON};
 
 const Double_t JET_MEAN_LOSS = 18.69; //GeV calculated mean energy loss of jets from b0 collision
+const Double_t ALPHA = .42;
 
 using namespace std;
 
@@ -105,22 +108,24 @@ class Collision {
         TF1*        CalcJetIntegrand(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t phi);
         TF1*        JetOfPhi(Double_t alpha=0, Double_t x0=0, Double_t y0=0); 
-        TH1*        SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=10, Double_t xmax=10, Double_t ymax=10); 
-        TH2*       SampleJetsPhi(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10); 
-        TH2*       SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
-        pair<Double_t, Double_t> SampleJet(Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
-        pair<Double_t, Double_t> SampleJetPair(Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        TNtupleD*        SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=10, Double_t xmax=10, Double_t ymax=10); 
+        //SampleJetsPhi Is DEPRECATED
+        TH2*        SampleJetsPhi(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10); 
+        TNtupleD*        SampleJetsPaired(Int_t n=1000, Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        vector<Double_t> SampleJet(Double_t alpha=0, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
+        vector<Double_t> SampleJetPair(Double_t alpha=0, Double_t phi=-1, Double_t xmin=-10, Double_t ymin=-10, Double_t xmax=10, Double_t ymax=10);
 
         TH1*        Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
         TF1*        UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
         TH1*        DifferenceSpectrum(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0); 
+        TH1*        DifferenceSpectrumPaper(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t qhatL=5.0); 
         TH1*        SampleUnquenched(Int_t n_samples=1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);  
         TH1*        SpectraRatio(Int_t n_samples=10000, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0);
         TH1*        SampleUnquenchedSplit(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0);
         TH1*        QGSpectraRatio(Int_t n_samples=10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quarkFrac=0.34);
         Double_t    CalcL(Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
-        //Double_t    Calc_qHat();
         Double_t    CalcOmegac(Double_t qhatL, Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
+        Double_t    Rho0(Double_t x=0.0, Double_t y=0.0);
 };
 
         
@@ -285,6 +290,8 @@ struct RhoJet {
 Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100); 
 
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100);
+
+Double_t SampleEnergyLoss(Double_t alpha, Double_t omegac, Double_t maxEnergy);
 
 TF1* GetEnergyLossDist(Double_t alpha, Double_t omegac);
 

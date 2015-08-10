@@ -59,14 +59,14 @@ void MakeAndSaveJets(Int_t n, Double_t alpha, Double_t b, Double_t phi, const ch
         name = TString::Format("%s/SampledJetsPairs_alpha%.2f_%uk_b%.1f_phi%.1f.root", dir_path, alpha, n / 1000, b, phi); 
         cout << name << endl;
         f = TFile::Open(name, "recreate");
-        TH2* jets = coll.SampleJetsPaired(n, alpha, phi, xmin, ymin, xmax, ymax);
+        TNtupleD* jets = coll.SampleJetsPaired(n, alpha, phi, xmin, ymin, xmax, ymax);
         jets->Write(); 
     }
     else {
         name = TString::Format("%s/SampledJets_alpha%.2f_%uk_b%.1f.root", dir_path, alpha, n / 1000, b); 
         cout << name << endl;
         f = TFile::Open(name, "recreate");
-        TH1* jets = coll.SampleJets(n, alpha, xmin, ymin, xmax, ymax);
+        TNtupleD* jets = coll.SampleJets(n, alpha, xmin, ymin, xmax, ymax);
         jets->Write(); 
     }
     f->Close();
