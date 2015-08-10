@@ -118,11 +118,13 @@ class Collision {
         TH1*        Unquenched(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
         TF1*        UnquenchedTF(Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);
         TH1*        DifferenceSpectrum(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0); 
-        TH1*        DifferenceSpectrumPaper(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t qhatL=5.0); 
+        TH1*        DifferenceSpectrum(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0, TH2* jets=0, Double_t qhatL=5.0); 
         TH1*        SampleUnquenched(Int_t n_samples=1000, Double_t minPt=20.0, Double_t n=5.0, Double_t beta=0.0);  
         TH1*        SpectraRatio(Int_t n_samples=10000, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n=5.0, Double_t beta=0.0, TH1* jets=0, Double_t normalization=15.0);
+        TH1*        SpectraRatio(Int_t n_samples=10000, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n=5.0, Double_t beta=0.0, TH2* jets=0, Double_t normalization=15.0);
         TH1*        SampleUnquenchedSplit(Int_t n_samples=1000, Double_t minPt=20.0, Double_t maxPt=320.0, Double_t n=5.0, Double_t beta=0.0);
         TH1*        QGSpectraRatio(Int_t n_samples=10000, TH1* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quarkFrac=0.34);
+        TH1*        QGSpectraRatio(Int_t n_samples=10000, TH2* jets=0, Double_t normalization=15.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quarkFrac=0.34);
         Double_t    CalcL(Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
         Double_t    CalcOmegac(Double_t qhatL, Double_t x=0.0, Double_t y=0.0, Double_t phi=0.0);
         Double_t    Rho0(Double_t x=0.0, Double_t y=0.0);

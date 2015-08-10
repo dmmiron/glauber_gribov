@@ -20,6 +20,23 @@ TH1* LoadJets(TString filename) {
     return jets;
 }
 
+TNtupleD* LoadJetsTuple(TString filename) {
+    TFile *f = TFile::Open(filename);
+    TList *l = f->GetListOfKeys();
+    TString name = l->First()->GetName();
+    TNtupleD* jets = (TNtupleD*)f->Get(name);
+    jets->SetDirectory(0);
+    f->Close();
+    return jets;
+}
+
+TH2* LoadJetsRho0(TString filename) {
+    TNtupleD* tup = LoadJetsTuple(filename);
+    TH2F* hist = new TH2F("jets", "jets rho0", 100, 0, 100, 100, 0, 10);
+    tup->Draw("loss1:rho0>>jets");
+    return hist;
+}
+
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     TFile* f = TFile::Open("~/initial/total.root");
     TString name;
@@ -97,25 +114,63 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
     while (deltaE < endDeltaE) {
         if (quarkFrac != 1.0) {
             ratio = coll.QGSpectraRatio(n_samples, jets, deltaE, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quarkFrac);
-            /* 
-               g_ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*deltaE);
-               g_ratio->SetName("gluons");
-               g_ratio->Write();
-               ratio->Add(q_ratio, g_ratio, quarkFrac, gluonFrac);
-               */
         }
         else {
             ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
         }
-        //ratio->SetNameTitle(q_ratio->GetName(), "quarks_plus_gluons");
-        //q_ratio->SetName("quarks");
         ratio->Write();
         delete ratio;
-        //q_ratio->Write();
         deltaE += stepE;
     }
     f->Close();
 }
+
+void MakeSpectra(TString outfile, Int_t n_samples, TH2* jets, Double_t startDeltaE, Double_t endDeltaE, Double_t stepE, Double_t b, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
+    //jets now is a two-d histogram that stores both the jet energy and the rho0 value
+    TFile* f = TFile::Open(outfile, "recreate");
+    Collision coll = Collision(6.62, .546, b);
+    Double_t deltaE = startDeltaE;
+    Double_t gluonFrac= 1-quarkFrac;
+    Double_t gluonCoef;
+    TH1* q_ratio;
+    TH1* g_ratio;
+    TH1* ratio;
+    while (deltaE < endDeltaE) {
+        if (quarkFrac != 1.0) {
+            ratio = coll.QGSpectraRatio(n_samples, jets, deltaE, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quarkFrac);
+        }
+        else {
+            ratio = coll.SpectraRatio(n_samples, minPt, maxPt, n_quark, beta_quark, jets, deltaE);
+        }
+        ratio->Write();
+        delete ratio;
+        deltaE += stepE;
+    }
+    f->Close();
+}
+
+void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
+    TList* files = GetFiles(sampled_dir);
+    TSystemFile* file;
+    TIter next(files);
+    TString fname;
+    TString outname;
+    Double_t b;
+    Double_t phi;
+    TH2* jets;
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            fname = file->GetName();
+            b = ParseParameter(fname, "b");
+            phi = ParseParameter(fname, "phi");
+            outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
+            jets = LoadJetsRho0(sampled_dir + "/" + fname);
+            MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
+            delete jets; 
+        }
+    }
+}
+
 
 void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
     TList* files = GetFiles(sampled_dir);
@@ -138,6 +193,7 @@ void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Dou
         }
     }
 }
+
 
 Double_t CalcAsymmetry(Double_t jet1, Double_t jet2, Bool_t x_j) {
     if (x_j) {

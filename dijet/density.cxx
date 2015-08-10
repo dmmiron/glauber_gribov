@@ -352,12 +352,12 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     return h;
 }
 
-TH1* Collision::DifferenceSpectrumPaper(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH1* jets, Double_t qhatL) {
+TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH2* jets, Double_t qhatL) {
     //n is number of samples per SECTION
     //make all new histograms automatically call sumw2
     TH1::SetDefaultSumw2();
     TH1* h = new TH1F(TString::Format("DifferenceSpectrum%.2f", n), "Difference", maxPt, 0, maxPt);
-    Double_t difference;
+    Double_t difference = 0.0;
     TH1* unquenched = Unquenched(minPt, n, beta);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
     TH1* temp;  
@@ -365,37 +365,25 @@ TH1* Collision::DifferenceSpectrumPaper(Int_t n_samples, Double_t minPt, Double_
     Int_t count = 0;
     Double_t startPt = minPt;
     Double_t exp;
-    Double_t normalization;
     Double_t omegac;
     //renormalize deltaE distribution
     //note fixing this from calculating the mean from a new sample every time should be a major speed increase
 
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
-    Double_t unquenchedE;
-    Double_t energyLoss;
-    vector<Double_t> jetv;
+    Double_t unquenchedE, energyLoss, intRhodl, rho0, L;
     while (startPt < maxPt) { 
         scale = unquenchedTF->Integral(startPt,SAMPLE_COEF*startPt)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
         while (count < n_samples) {
             unquenchedE = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt);
             if (jets!=0) {
-                //temporary values of x, y, phi
-                //CalcOmegac(qhatL, x, y, phi);
-                omegac = CalcOmegac(qhatL, 0, 0, 0); 
-                normalization = GetEnergyLossMean(ALPHA, omegac, unquenchedE); 
-                //normalization = SampleEnergyLoss(ALPHA, omegac, unquenchedE);
+                jets->GetRandom2(intRhodl, rho0);
+                L = intRhodl/rho0;
+                omegac = qhatL*L/2.0;
+                energyLoss = SampleEnergyLoss(ALPHA, omegac, unquenchedE);
 
-                difference = unquenchedE - normalization*(jets->GetRandom());
+                difference = unquenchedE - energyLoss;
             }
-            else {
-                //call Sample Jet
-                //unpack x, y, phi, energyloss
-                jetv = SampleJet();
-                energyLoss = jetv[0]; 
-                omegac = CalcOmegac(qhatL, jetv[1], jetv[2], jetv[3]);
-                normalization = GetEnergyLossMean(ALPHA, omegac, unquenchedE);
-                difference = unquenchedE - normalization*energyLoss;
-            }
+            //should have error handling
             if (difference>0) {
                 temp->Fill(difference);
                 count++;
@@ -459,6 +447,19 @@ TH1* Collision::SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Do
     delete difference;
     return quot;
 }
+        
+TH1* Collision::SpectraRatio(Int_t n_samples, Double_t minPt, Double_t maxPt, Double_t n, Double_t beta, TH2* jets, Double_t normalization) {
+    TH1::SetDefaultSumw2();
+    TH1* unquenched = SampleUnquenchedSplit(n_samples, minPt, maxPt, n, beta);
+    TH1* difference = DifferenceSpectrum(n_samples, minPt, maxPt, n, beta, jets, normalization);
+    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
+    TH1* quot = new TH1F(name, name, maxPt, 0, maxPt);
+    quot->Divide(difference, unquenched);
+    delete unquenched;
+    delete difference;
+    return quot;
+}
+
 
 TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     TH1::SetDefaultSumw2();
@@ -496,6 +497,44 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     delete denominator;
     return ratio;
 }
+
+TH1* Collision::QGSpectraRatio(Int_t n_samples, TH2* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
+    TH1::SetDefaultSumw2();
+    TH1* unquenchedQuark = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_quark, beta_quark);
+    TH1* unquenchedGluon = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_gluon, beta_gluon);
+    TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, normalization);
+    TH1* differenceGluon = DifferenceSpectrum(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*normalization);
+    Double_t gCoef = GluonFracCoef(quarkFrac, differenceQuark, differenceGluon);
+
+    TH1* numerator = new TH1F("num", "num", maxPt, 0, maxPt);
+    TH1* denominator = new TH1F("den", "den", maxPt, 0, maxPt);
+    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
+    TH1* ratio = new TH1F(TString::Format("quarks_plus_gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+    TH1* q_ratio = new TH1F(TString::Format("quarks_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+    TH1* g_ratio = new TH1F(TString::Format("gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+
+    numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
+    denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
+    cout << "before q_ratio" << endl;
+    q_ratio->Divide(differenceQuark, unquenchedQuark);
+    cout << "before g_ratio" << endl;
+    g_ratio->Divide(differenceGluon, unquenchedGluon);
+    cout << "before ratio" << endl;
+    ratio->Divide(numerator, denominator);
+    q_ratio->Write();
+    g_ratio->Write();
+
+    delete q_ratio;
+    delete g_ratio;
+    delete unquenchedQuark;
+    delete unquenchedGluon;
+    delete differenceQuark;
+    delete differenceGluon;
+    delete numerator;
+    delete denominator;
+    return ratio;
+}
+
 
 void Collision::SetRAAErrors(TH1* ratio, TH1* numerator) {
     Double_t error;
