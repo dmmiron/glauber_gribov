@@ -25,16 +25,21 @@ TNtupleD* LoadJetsTuple(TString filename) {
     TList *l = f->GetListOfKeys();
     TString name = l->First()->GetName();
     TNtupleD* jets = (TNtupleD*)f->Get(name);
-    jets->SetDirectory(0);
-    f->Close();
     return jets;
 }
 
-TH2* LoadJetsRho0(TString filename) {
-    TNtupleD* tup = LoadJetsTuple(filename);
-    TH2F* hist = new TH2F("jets", "jets rho0", 100, 0, 100, 100, 0, 10);
-    tup->Draw("loss1:rho0>>jets");
+TH2* LoadJetsRho0(TFile* f) {
+    TH2D* hist = new TH2D("jets", "jets rho0", 100, 0, 100, 100, 0, 10);
+    TList *l = f->GetListOfKeys();
+    TString name = l->First()->GetName();
+    TNtupleD* tup = (TNtupleD*)f->Get(name);
+    tup->Draw("rho0:loss1>>jets", "", "goff");
+    hist->SetDirectory(0);
+    delete tup;
+    //TH2D* out = hist->Clone();
+    //delete hist;
     return hist;
+    //return out;
 }
 
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
@@ -103,13 +108,11 @@ void SweepJets(Int_t n, Double_t alpha, Double_t bmin, Double_t bmax, Double_t b
 }
 
 void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDeltaE, Double_t endDeltaE, Double_t stepE, Double_t b, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
-    TFile* f = TFile::Open(outfile, "recreate");
+    TFile* f = TFile::Open(outfile, "update");
     Collision coll = Collision(6.62, .546, b);
     Double_t deltaE = startDeltaE;
     Double_t gluonFrac= 1-quarkFrac;
     Double_t gluonCoef;
-    TH1* q_ratio;
-    TH1* g_ratio;
     TH1* ratio;
     while (deltaE < endDeltaE) {
         if (quarkFrac != 1.0) {
@@ -127,13 +130,11 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH1* jets, Double_t startDelt
 
 void MakeSpectra(TString outfile, Int_t n_samples, TH2* jets, Double_t startDeltaE, Double_t endDeltaE, Double_t stepE, Double_t b, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     //jets now is a two-d histogram that stores both the jet energy and the rho0 value
-    TFile* f = TFile::Open(outfile, "recreate");
+    TFile* f = TFile::Open(outfile, "update");
     Collision coll = Collision(6.62, .546, b);
     Double_t deltaE = startDeltaE;
     Double_t gluonFrac= 1-quarkFrac;
     Double_t gluonCoef;
-    TH1* q_ratio;
-    TH1* g_ratio;
     TH1* ratio;
     while (deltaE < endDeltaE) {
         if (quarkFrac != 1.0) {
@@ -149,7 +150,36 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH2* jets, Double_t startDelt
     f->Close();
 }
 
+
+void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Double_t b, Double_t phi, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
+    TFile* f;
+    vector<TFile*> fs;
+    TList* files = GetFiles(sampled_dir);
+    TSystemFile* file;
+    TIter next(files);
+    TString fname;
+    TString outname;
+    TH2* jets;
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            fname = file->GetName();
+            if (b == ParseParameter(fname, "b") && phi == ParseParameter(fname, "phi")) {
+                f = TFile::Open(sampled_dir + "/" + fname);
+                //fs.push_back(f);
+                outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
+                jets = LoadJetsRho0(f);
+                f->Close();
+                MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
+                delete jets; 
+            }
+        }
+    }
+    //CloseFiles(fs);
+}
+/*
 void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
+    TFile* f;
+    vector<TFile*> fs;
     TList* files = GetFiles(sampled_dir);
     TSystemFile* file;
     TIter next(files);
@@ -161,16 +191,20 @@ void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Int_t nsample
     while ((file=(TSystemFile*)next())) {
         if (!file->IsDirectory()) {
             fname = file->GetName();
+            f = TFile::Open(sampled_dir + "/" + fname);
+            fs.push_back(f);
             b = ParseParameter(fname, "b");
             phi = ParseParameter(fname, "phi");
             outname = outpath + TString::Format("/Spectra1D_b%.1f_phi%.1f_nq%.2f_betaq%.2f_qfrac%.2f.root", b, phi, n_quark, beta_quark, quark_frac);
-            jets = LoadJetsRho0(sampled_dir + "/" + fname);
+            //jets = LoadJetsRho0(sampled_dir + "/" + fname);
+            jets = LoadJetsRho0(f);
             MakeSpectra(outname, nsamples, jets, minDeltaE, maxDeltaE, stepDeltaE, b, minPt, maxPt, n_quark, beta_quark, n_gluon, beta_gluon, quark_frac);
             delete jets; 
         }
     }
+    CloseFiles(fs);
 }
-
+*/
 
 void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
     TList* files = GetFiles(sampled_dir);
@@ -781,7 +815,7 @@ void CalcMeansTuple(TString dirname, TString outfile) {
         }
     }
     TTree* outtuple;
-    TFile* out = TFile::Open(outfile, "recreate");
+    TFile* out = TFile::Open(outfile, "update");
     outtuple = TTree::MergeTrees(x_j_ntuples);
     outtuple->Write();
     outtuple = TTree::MergeTrees(A_j_ntuples);
@@ -909,3 +943,37 @@ void CloseFiles(vector<TFile*> fs) {
         f->Close();
     }
 }
+
+void RebinDir(TString inputdir, TString outputdir, Int_t ngroup, Bool_t scale) {
+    TList* files = GetFiles(inputdir);
+    TIter next(files);
+    TSystemFile* file;
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            RebinFile(file->GetName(), inputdir, outputdir, ngroup, scale);
+        }
+    }
+}
+
+//Includes SCALING
+void RebinFile(TString fname, TString inputdir, TString outputdir, Int_t ngroup, Bool_t scale) {
+    TFile* fin = TFile::Open(inputdir + "/" + fname);
+    TFile* fout = TFile::Open(outputdir + "/" + fname, "recreate");
+    TIter nextkey(fin->GetListOfKeys());
+    TKey* key;
+    TH1* hist;
+    TH1* hnew;
+    while ((key = (TKey*)nextkey())) {
+        hist = (TH1*)fin->Get(key->GetName());
+        hist->Rebin(ngroup);
+        if (scale) {
+            hist->Scale(1.0/ngroup); 
+        }
+        hist->Write();
+    }
+    fout->Close();
+    fin->Close();
+}
+
+
+
