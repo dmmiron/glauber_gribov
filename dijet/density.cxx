@@ -302,7 +302,7 @@ TH1* Collision::Unquenched(Double_t minPt, Double_t n, Double_t beta) {
 }
 
 TF1* Collision::UnquenchedTF(Double_t minPt, Double_t n, Double_t beta) {
-    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 100.0*minPt);
+    TF1* Pt_dist = new TF1("Pt_dist", "([0]/x)^([1]+[2]*log([0]/x))", minPt, 1000.0*minPt);
     Pt_dist->SetNpx(10000);
     Pt_dist->SetParameters(minPt, n, beta);
     return Pt_dist;
@@ -371,15 +371,22 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
 
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
     Double_t unquenchedE, energyLoss, intRhodl, rho0, L;
+    rho0 = 1;
     while (startPt < maxPt) { 
         scale = unquenchedTF->Integral(startPt,SAMPLE_COEF*startPt)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
         while (count < n_samples) {
             unquenchedE = unquenchedTF->GetRandom(startPt, SAMPLE_COEF*startPt);
             if (jets!=0) {
                 jets->GetRandom2(intRhodl, rho0);
+                while (rho0 <= 0.01) {
+                    jets->GetRandom2(intRhodl, rho0);
+                }
+                
                 L = intRhodl/rho0;
                 omegac = qhatL*L/2.0;
+                //cout << "L : " << L << " omegac: " << omegac << endl;
                 energyLoss = SampleEnergyLoss(ALPHA, omegac, unquenchedE);
+                //cout << "energyLoss: " << energyLoss << endl;
 
                 difference = unquenchedE - energyLoss;
             }
@@ -394,6 +401,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
         temp->Reset();
         startPt = startPt*SAMPLE_COEF;
     }
+    delete unquenchedTF;
     delete unquenched;
     delete temp;
     return h;
@@ -419,14 +427,10 @@ TH1* Collision::SampleUnquenchedSplit(Int_t n_samples, Double_t minPt, Double_t 
     Double_t scale;
     while (start < maxPt) {
         scale = unquenchedTF->Integral(start,SAMPLE_COEF*start)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
-        //cout << scale << endl;
         
-        //cout << start << " " << start*2.0 << endl;
         for (Int_t i = 0; i < n_samples; i++) {
             temp->Fill(unquenchedTF->GetRandom(start, start*SAMPLE_COEF));
         }
-        //cout << "min: " << min << "start: " << start << "pow: " << pow(start/(2.0*min), 4) << endl;
-        //cout << "scale: " << scale << endl;
         start = start*SAMPLE_COEF;
         h->Add(temp, scale);
         temp->Reset();
@@ -535,7 +539,6 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH2* jets, Double_t normalizatio
     return ratio;
 }
 
-
 void Collision::SetRAAErrors(TH1* ratio, TH1* numerator) {
     Double_t error;
     for (Int_t bin = 0; bin < numerator->GetNbinsX(); bin++) {
@@ -570,7 +573,13 @@ Double_t Collision::CalcOmegac(Double_t qhatL, Double_t x, Double_t y, Double_t 
 Double_t SampleEnergyLoss(Double_t alpha, Double_t omegac, Double_t maxEnergy) {
     TF1* dist = GetEnergyLossDist(alpha, omegac);
     dist->SetRange(0, maxEnergy);
-    return dist->GetRandom();
+    Double_t out = dist->GetRandom();
+    if (out == 0) {
+        cerr << "maxEnergy: " << maxEnergy << "omegac: " << omegac << endl;
+        cerr << "energy loss: " << out << endl;
+    }
+    delete dist;
+    return out;
 }
 
 //D(epsilon) distribution (equation 22 in quenching in media paper)

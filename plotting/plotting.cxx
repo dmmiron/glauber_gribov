@@ -11,6 +11,8 @@
 #include <TLegend.h>
 #include <TStyle.h>
 #include <TKey.h>
+#include <TSystemFile.h>
+#include <TFitResult.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName, Bool_t asym) {
     TCanvas *canvas = new TCanvas();
@@ -91,7 +93,7 @@ void MakeAndSavePlotsMeans(TString filename, TString save_dir, TString flavor, I
     TNtuple* means;
     Double_t b, DE;
     //flavor means, phi, error on flavor means
-    TString varexp = flavor + ":pi*phi/180.0:"+ flavor+"E";
+    TString varexp = flavor + ":pi*phi/180.0:" + flavor + "E";
     TString cutexp;
     TString histname;
     TString savename;
@@ -154,7 +156,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     //TNtuple* fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisq:ndf");
     TNtuple* fitResults = CreateResultsTupleRAA(nharmonics);
     Double_t b, pt, DE;
-    TString varexp = "RAA:pi*phi/180.0";
+    TString varexp = "RAA:pi*phi/180.0:err";
     TString cutexp;
     TString histname;
     TString savename;
@@ -170,6 +172,7 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
                 fit = CosFitFunc("v", nharmonics);
                 c = new TCanvas();
                 cutexp = TString::Format("b==%.1f && pt==%.1f", b, pt);
+
                 histname = TString::Format("fit_b%.1f_pt%.1f", b, pt);
                 RAA->Draw(varexp, cutexp, "goff");
                 gr = DrawGraphFit(RAA, fit, "Single Jet Quenching", "phi", "RAA", false); 
@@ -197,17 +200,75 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     gROOT->SetBatch(kFALSE);
 }
 
+
+void MakeFitPlotsRAASpectra(TString inputdir, TString outputdir) {
+    TList* files = GetFiles(inputdir);
+    TIter next(files);
+    TSystemFile* file;
+    TFile* f;
+    TNtuple* fitResults = new TNtuple("RAA_Spectra_fit_results", "RAA_spectra", "b:phi:DE:flavor:a:a_err:b_par:b_err:chisquare:ndf:chisqPerNDF");
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            FitRAASpectra(file->GetName(), inputdir, outputdir, fitResults);  
+        }
+    }
+    TFile* fresults = TFile::Open(outputdir + "/fit_results_tuple.root", "recreate");
+    fitResults->Write();
+    fresults->Close();
+}
+
+void FitRAASpectra(TString fname, TString inputdir, TString outputdir, TNtuple* fitResults) {
+    TFile* fin = TFile::Open(inputdir + "/" + fname);
+    TFile* fout = TFile::Open(outputdir + "/" + fname, "recreate");
+    TF1* fit = LinLogFit();
+    TFitResultPtr r; 
+    TIter nextkey(fin->GetListOfKeys());
+    TKey* key;
+    TH1* spectrum;
+    Double_t b, phi, DE, flavor;
+    b = ParseParameter(fname, "b");
+    phi = ParseParameter(fname, "phi");
+    TString keyname;
+    while ((key = (TKey*)nextkey())) {
+        keyname = TString(key->GetName());
+        flavor = GetFlavor(keyname);
+        DE = ParseParameter(keyname, "DE=");
+        spectrum = (TH1*)fin->Get(keyname);
+        r = spectrum->Fit(fit, "SQO");
+        spectrum->Write();
+        fitResults->Fill(b, phi, DE, flavor, r->Parameter(0), r->ParError(0), r->Parameter(1), r->ParError(1), r->Chi2(), r->Ndf(), r->Chi2()/r->Ndf());
+        //r->Write();
+    }
+    fout->Close();
+    fin->Close();
+}
+
+Int_t GetFlavor(TString s) {
+    if (s.Contains("quarks_plus_gluons")) {
+        return QUARK_PLUS_GLUON;
+    }
+    else if (s.Contains("quarks")) {
+        return QUARK;
+    }
+    else if (s.Contains("gluons")) {
+        return GLUON;
+    }
+    else {
+        return -1;
+    }
+}
+
 TNtuple* CreateResultsTupleRAA(Int_t nharmonics) {
     TNtuple* fitResults;
     switch (nharmonics) {
         case 2:
-            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:A_err:v2:v2_err:chisquare:ndf:chisqPerNDF");
             break;
         case 3:
-            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:v3:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:A_err:v2:v2_err:v3:v3_err:chisquare:ndf:chisqPerNDF");
             break;
         case 4:
-            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:v2:v3:v4:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("RAA_fit_results", "RAA_fit_results", "b:pt:DE:A:A_err:v2:v2_err:v3:v3_err:v4:v4_err:chisquare:ndf:chisqPerNDF");
             break;
     }
     return fitResults;
@@ -216,13 +277,13 @@ TNtuple* CreateResultsTupleRAA(Int_t nharmonics) {
 TNtuple* CreateResultsTupleAsymmetry(Int_t nharmonics) {
     TNtuple* fitResults;
     if (nharmonics == 2) {
-            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:A_err:c2:c2_err:chisquare:ndf:chisqPerNDF");
     }
     else if (nharmonics == 3) {
-            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:c3:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:A_err:c2:c2_err:c3:c3_err:chisquare:ndf:chisqPerNDF");
     }
     else if (nharmonics == 4) {
-            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:c2:c3:c4:chisquare:ndf:chisqPerNDF");
+            fitResults = new TNtuple("asymmetry_fit_results", "asymmetry_fit_results", "b:DE:A:A_err:c2:c2_err:c3:c3_err:c4:c4_err:chisquare:ndf:chisqPerNDF");
     }
     return fitResults;
 }
@@ -231,13 +292,13 @@ void FillResultsTupleRAA(TNtuple* fitResults, TF1* fit, Int_t nharmonics, Double
     Double_t chisq = fit->GetChisquare();
     Double_t ndf = fit->GetNDF();
     if (nharmonics == 2) {
-        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("v2"), fit->GetParError(1), chisq, ndf, chisq/ndf);
     }
     else if (nharmonics == 3) {
-        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetParameter("v3"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("v2"), fit->GetParError(1), fit->GetParameter("v3"), fit->GetParError(2), chisq, ndf, chisq/ndf);
     }
     else if (nharmonics == 4) {
-        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParameter("v2"), fit->GetParameter("v3"), fit->GetParameter("v4"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, pt, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("v2"), fit->GetParError(1), fit->GetParameter("v3"), fit->GetParError(2), fit->GetParameter("v4"), fit->GetParError(3), chisq, ndf, chisq/ndf);
     } 
 }
 
@@ -245,13 +306,13 @@ void FillResultsTupleAsymmetry(TNtuple* fitResults, TF1* fit, Int_t nharmonics, 
     Double_t chisq = fit->GetChisquare();
     Double_t ndf = fit->GetNDF();
     if (nharmonics == 2) {
-        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("c2"), fit->GetParError(1), chisq, ndf, chisq/ndf);
     }
     else if (nharmonics == 3) {
-        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetParameter("c3"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("c2"), fit->GetParError(1), fit->GetParameter("c3"), fit->GetParError(2), chisq, ndf, chisq/ndf);
     }
     else if (nharmonics == 4) {
-        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParameter("c2"), fit->GetParameter("c3"), fit->GetParameter("c4"), chisq, ndf, chisq/ndf);
+        fitResults->Fill(b, DE, fit->GetParameter("A"), fit->GetParError(0), fit->GetParameter("c2"), fit->GetParError(1), fit->GetParameter("c3"), fit->GetParError(2), fit->GetParameter("c4"), fit->GetParError(3), chisq, ndf, chisq/ndf);
     } 
 }
 
@@ -266,10 +327,12 @@ void DrawLegend(TGraph* gr, TF1* fit, TString entry, Double_t xmin, Double_t xma
     l->SetFillColor(0);
     TString parname;
     Double_t parval;
+    Double_t parerr;
     for (Int_t i = 0; i < fit->GetNpar(); i++) {
         parname = fit->GetParName(i);
         parval = fit->GetParameter(i);
-        l->AddEntry(parname, parname+"="+Form("%f", parval), "");
+        parerr = fit->GetParError(i);
+        l->AddEntry(parname, parname+"="+Form("%f #pm %f", parval, parerr), "");
     }
     l->Draw();
 }
@@ -296,7 +359,7 @@ TGraphErrors* DrawGraphFit(TNtuple* ntuple, TF1* fit, TString title, TString xTi
     }
     else {
         //May need to change, but currently not using errors for RAA calc
-        gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, 0);
+        gr = new TGraphErrors(ntuple->GetSelectedRows(), ntuple->GetV2(), ntuple->GetV1(), 0, ntuple->GetV3());
     }
     DrawGraphFit(gr, fit, title, xTitle, yTitle);
     return gr;
@@ -346,3 +409,10 @@ void MakePlot(TF1* func, TString title, TString xtitle, TString ytitle, Double_t
     c->SaveAs(title+".pdf");
 }
 
+TF1* LinLogFit() {
+    TF1* fit;
+    fit = new TF1("fit", "[0]*TMath::Log(x/100) + [1]");
+    fit->SetParNames("a", "b");
+    fit->SetParameters(0.0, 1.0);
+    return fit;
+}

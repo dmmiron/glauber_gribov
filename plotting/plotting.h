@@ -35,6 +35,14 @@ void FillResultsTupleRAA(TNtuple* fitResults, TF1* fit, Int_t nharmonics, Double
 
 void FillResultsTupleAsymmetry(TNtuple* fitResults, TF1* fit, Int_t nharmonics, Double_t b, Double_t DE);
 
+void MakeFitPlotsRAASpectra(TString inputdir, TString outputdir); 
+
+void FitRAASpectra(TString fname, TString inputdir, TString outputdir, TNtuple* fitResults);
+
 TF1* CosFitFunc(TString coef="c", Int_t nharmonics=4);
+
+TF1* LinLogFit();
+
+Int_t GetFlavor(TString s);
 
 #endif

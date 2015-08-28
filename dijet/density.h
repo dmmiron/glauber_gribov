@@ -22,7 +22,7 @@ const Double_t EPSILON = pow(10, -7);
 const Double_t GLUON_RATIO = 9.0/4.0; //ratio of gluon energy suppression to quark energy suppression
 const Double_t CROSS_SECTION = 7.7; //barnes
 
-const Double_t SAMPLE_COEF = 1.2;
+const Double_t SAMPLE_COEF = 2;
 
 const Int_t QUARK_QUARK = 0;
 const Int_t QUARK_GLUON = 1; 
@@ -31,6 +31,7 @@ const Int_t GLUON_GLUON = 3;
 const Int_t ALL = 4;
 const Int_t QUARK = 0;
 const Int_t GLUON = 1;
+const Int_t QUARK_PLUS_GLUON = 2;
 const Int_t FLAVORS [4] = {QUARK_QUARK, QUARK_GLUON, GLUON_QUARK, GLUON_GLUON};
 
 const Double_t JET_MEAN_LOSS = 18.69; //GeV calculated mean energy loss of jets from b0 collision
