@@ -54,7 +54,7 @@ TF1* Nucleus::MakeThicknessIntegrand() {
     TF1 *fThickIntegrand = new TF1("fThickIntegrand", "fDensity*x/TMath::Sqrt(x*x-[0]*[0])", 0, INFTY); 
     return fThickIntegrand;
 }
-        
+
 //Collision Class-contains two nucleus objects (possibly identical?) and then also has 2-d particle density funciton and method to get values given input locations
 
 Collision::Collision(Double_t iR0, Double_t iMu, Double_t iB) {
@@ -625,5 +625,3 @@ Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE) {
     delete ratio;
     return gCoef;
 }
-
-

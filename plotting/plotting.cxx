@@ -335,3 +335,14 @@ TF1* CosFitFunc(TString coef, Int_t nharmonics) {
     }
     return fit;
 }
+
+void MakePlot(TF1* func, TString title, TString xtitle, TString ytitle, Double_t xmin, Double_t xmax) {
+    TCanvas* c = new TCanvas();
+    func->SetRange(xmin, xmax);
+    func->SetTitle(title);
+    func->GetXaxis()->SetTitle(xtitle);
+    func->GetYaxis()->SetTitle(ytitle);
+    func->Draw();
+    c->SaveAs(title+".pdf");
+}
+
