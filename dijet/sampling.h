@@ -33,7 +33,7 @@ void MakeSpectra(TString outfile, Int_t n_samples=10000, TH2* jets=0, Double_t s
 
 void SweepSpectraAngle(TString outpath, TString sampled_dir, Int_t nsamples=100000, Double_t minDeltaE=5.0, Double_t maxDeltaE=20.0, Double_t stepDeltaE=1.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quark_frac=0.34);
 
-void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Double_t b, Double_t phi, Int_t nsamples=100000, Double_t minDeltaE=5.0, Double_t maxDeltaE=20.0, Double_t stepDeltaE=1.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quark_frac=0.34);
+void SweepSpectraAngleRho0(TString outpath, TString sampled_dir, Double_t b, Double_t phi, Int_t nsamples=100000, Double_t minDeltaE=5.0, Double_t maxDeltaE=20.0, Double_t stepDeltaE=1.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quark_frac=0.34);
 /*
 void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Int_t nsamples=100000, Double_t minDeltaE=5.0, Double_t maxDeltaE=20.0, Double_t stepDeltaE=1.0, Double_t minPt=20.0, Double_t maxPt=640.0, Double_t n_quark=4.19, Double_t beta_quark=-0.71, Double_t n_gluon=4.69, Double_t beta_gluon=-0.80, Double_t quark_frac=0.34);
 Double_t CalcAsymmetry(Double_t jet1, Double_t jet2, Bool_t x_j=X_J);

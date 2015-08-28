@@ -11,6 +11,8 @@
 #include <TLegend.h>
 #include <TStyle.h>
 #include <TKey.h>
+#include <TSystemFile.h>
+#include <TFitResult.h>
 
 void plotTHStack(THStack *hists, TString xtitle, TString ytitle, TString saveName, Bool_t asym) {
     TCanvas *canvas = new TCanvas();
@@ -198,6 +200,64 @@ void MakeAndSavePlotsRAA(TString filename, TString save_dir, Double_t minPt, Dou
     gROOT->SetBatch(kFALSE);
 }
 
+
+void MakeFitPlotsRAASpectra(TString inputdir, TString outputdir) {
+    TList* files = GetFiles(inputdir);
+    TIter next(files);
+    TSystemFile* file;
+    TFile* f;
+    TNtuple* fitResults = new TNtuple("RAA_Spectra_fit_results", "RAA_spectra", "b:phi:DE:flavor:a:a_err:b_par:b_err:chisquare:ndf:chisqPerNDF");
+    while ((file=(TSystemFile*)next())) {
+        if (!file->IsDirectory()) {
+            FitRAASpectra(file->GetName(), inputdir, outputdir, fitResults);  
+        }
+    }
+    TFile* fresults = TFile::Open(outputdir + "/fit_results_tuple.root", "recreate");
+    fitResults->Write();
+    fresults->Close();
+}
+
+void FitRAASpectra(TString fname, TString inputdir, TString outputdir, TNtuple* fitResults) {
+    TFile* fin = TFile::Open(inputdir + "/" + fname);
+    TFile* fout = TFile::Open(outputdir + "/" + fname, "recreate");
+    TF1* fit = LinLogFit();
+    TFitResultPtr r; 
+    TIter nextkey(fin->GetListOfKeys());
+    TKey* key;
+    TH1* spectrum;
+    Double_t b, phi, DE, flavor;
+    b = ParseParameter(fname, "b");
+    phi = ParseParameter(fname, "phi");
+    TString keyname;
+    while ((key = (TKey*)nextkey())) {
+        keyname = TString(key->GetName());
+        flavor = GetFlavor(keyname);
+        DE = ParseParameter(keyname, "DE=");
+        spectrum = (TH1*)fin->Get(keyname);
+        r = spectrum->Fit(fit, "SQO");
+        spectrum->Write();
+        fitResults->Fill(b, phi, DE, flavor, r->Parameter(0), r->ParError(0), r->Parameter(1), r->ParError(1), r->Chi2(), r->Ndf(), r->Chi2()/r->Ndf());
+        //r->Write();
+    }
+    fout->Close();
+    fin->Close();
+}
+
+Int_t GetFlavor(TString s) {
+    if (s.Contains("quarks_plus_gluons")) {
+        return QUARK_PLUS_GLUON;
+    }
+    else if (s.Contains("quarks")) {
+        return QUARK;
+    }
+    else if (s.Contains("gluons")) {
+        return GLUON;
+    }
+    else {
+        return -1;
+    }
+}
+
 TNtuple* CreateResultsTupleRAA(Int_t nharmonics) {
     TNtuple* fitResults;
     switch (nharmonics) {
@@ -336,5 +396,13 @@ TF1* CosFitFunc(TString coef, Int_t nharmonics) {
             fit->SetParameters(1.0, 0.0, 0.0, 0.0);
             break;
     }
+    return fit;
+}
+
+TF1* LinLogFit() {
+    TF1* fit;
+    fit = new TF1("fit", "[0]*TMath::Log(x/100) + [1]");
+    fit->SetParNames("a", "b");
+    fit->SetParameters(0.0, 1.0);
     return fit;
 }

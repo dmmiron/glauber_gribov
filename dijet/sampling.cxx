@@ -151,7 +151,7 @@ void MakeSpectra(TString outfile, Int_t n_samples, TH2* jets, Double_t startDelt
 }
 
 
-void SweepSpectraAngleTuples(TString outpath, TString sampled_dir, Double_t b, Double_t phi, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
+void SweepSpectraAngleRho0(TString outpath, TString sampled_dir, Double_t b, Double_t phi, Int_t nsamples, Double_t minDeltaE, Double_t maxDeltaE, Double_t stepDeltaE, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quark_frac) {
     TFile* f;
     vector<TFile*> fs;
     TList* files = GetFiles(sampled_dir);
