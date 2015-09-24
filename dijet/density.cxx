@@ -360,7 +360,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     Double_t difference = 0.0;
     TH1* unquenched = Unquenched(minPt, n, beta);
     TF1* unquenchedTF = UnquenchedTF(minPt, n, beta);
-    TH1* temp;  
+    TH1* temp;
     Double_t scale;
     Int_t count = 0;
     Double_t startPt = minPt;
@@ -381,7 +381,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
                 while (rho0 <= 0.01) {
                     jets->GetRandom2(intRhodl, rho0);
                 }
-                
+
                 L = intRhodl/rho0;
                 omegac = qhatL*L/2.0;
                 //cout << "L : " << L << " omegac: " << omegac << endl;
@@ -502,20 +502,20 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
     return ratio;
 }
 
-TH1* Collision::QGSpectraRatio(Int_t n_samples, TH2* jets, Double_t normalization, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
+TH1* Collision::QGSpectraRatioBDMPS(Int_t n_samples, TH2* jets, Double_t qhatL, Double_t minPt, Double_t maxPt, Double_t n_quark, Double_t beta_quark, Double_t n_gluon, Double_t beta_gluon, Double_t quarkFrac) {
     TH1::SetDefaultSumw2();
     TH1* unquenchedQuark = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_quark, beta_quark);
     TH1* unquenchedGluon = SampleUnquenchedSplit(n_samples, minPt, maxPt, n_gluon, beta_gluon);
-    TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, normalization);
-    TH1* differenceGluon = DifferenceSpectrum(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*normalization);
+    TH1* differenceQuark = DifferenceSpectrum(n_samples, minPt, maxPt, n_quark, beta_quark, jets, qhatL);
+    TH1* differenceGluon = DifferenceSpectrum(n_samples, minPt, maxPt, n_gluon, beta_gluon, jets, GLUON_RATIO*qhatL);
     Double_t gCoef = GluonFracCoef(quarkFrac, differenceQuark, differenceGluon);
 
     TH1* numerator = new TH1F("num", "num", maxPt, 0, maxPt);
     TH1* denominator = new TH1F("den", "den", maxPt, 0, maxPt);
-    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, normalization); 
-    TH1* ratio = new TH1F(TString::Format("quarks_plus_gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
-    TH1* q_ratio = new TH1F(TString::Format("quarks_DE=%.2f", normalization), name, maxPt, 0, maxPt);
-    TH1* g_ratio = new TH1F(TString::Format("gluons_DE=%.2f", normalization), name, maxPt, 0, maxPt);
+    TString name = TString::Format("quot_b=%.2f_DE=%.2f", fB, qhatL); 
+    TH1* ratio = new TH1F(TString::Format("quarks_plus_gluons_DE=%.2f", qhatL), name, maxPt, 0, maxPt);
+    TH1* q_ratio = new TH1F(TString::Format("quarks_DE=%.2f", qhatL), name, maxPt, 0, maxPt);
+    TH1* g_ratio = new TH1F(TString::Format("gluons_DE=%.2f", qhatL), name, maxPt, 0, maxPt);
 
     numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);

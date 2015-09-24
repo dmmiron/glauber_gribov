@@ -450,6 +450,125 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, In
     return asym;
 }
 
+//loss tuple has pairs of rhodl and rho0 value for dijet samples
+TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_samples, Double_t qhatL, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
+    TH2* initial = (TH2*)initial_in->Clone();
+    TAxis* pt1 = initial->GetXaxis();
+    Int_t binlow = pt1->FindBin(minPt);
+    Int_t binhigh = pt1->FindBin(maxPt);
+    ClearBins(initial, -1, binlow, -1, -1);
+    ClearBins(initial, binhigh+1, -1, -1, -1);
+    pt1->SetRange(binlow, binhigh);
+
+    Double_t jet1, jet2, intRhodl1, intRhodl2, rho0, out1, out2, L1, L2, omegac1, omegac2;
+
+    Double_t qhatL1=qhatL, qhatL2=qhatL;
+
+    TString name = FlavorToString(flavor1, flavor2);
+    TString title = TString::Format("pt_[%.2f, %.2f] (BDMPS)", minPt, maxPt);
+    TH1* asym = new TH1F(name, title, 200, -1, 1);
+    if (x_j) {
+        SetAxes(asym, "x_j");
+    }
+    else {
+        SetAxes(asym, "A_j");
+    }
+
+    if (flavor1 == GLUON) {
+        qhatL1 = qhatL*GLUON_RATIO;
+    }
+    if (flavor2 == GLUON) {
+        qhatL2 = qhatL*GLUON_RATIO;
+    }
+    Int_t count = 0;
+    while (count < n_samples) {
+        initial->GetRandom2(jet1, jet2);
+        loss->GetRandom3(intRhodl1, intRhodl2, rho0);
+        L1 = intRhodl1/rho0;
+        L2 = intRhodl2/rho0;
+        omegac1 = qhatL1*L1/2.0;
+        omegac2 = qhatL2*L2/2.0;
+        //subtract energy loss calculated using initial energy as upper bound
+        out1 = jet1 - SampleEnergyLoss(ALPHA, omegac1, jet1);
+        out2 = jet2 - SampleEnergyLoss(ALPHA, omegac2, jet2);
+        /* FOR DEBUGGING
+        if (count % 1000 == 0) {
+            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
+            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
+        }
+        */
+        asym->Fill(CalcAsymmetry(out1, out2, x_j));
+        count++;
+    }
+    return asym;
+}
+
+/*
+TH1* SampleAsymmetryBDMPS(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+    vector<TH2*> initialJets = vector<TH2*>();
+    TH2* initial;
+    TH2* temp;
+    TH1* pt1_all;
+    TH1* pt2;
+    TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
+    Int_t binlow, binhigh;
+    for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
+        temp = *it;
+        initial = (TH2*)temp->Clone();
+        pt1_axis = initial->GetXaxis();
+        binlow = pt1_axis->FindBin(minPt);
+        binhigh = pt1_axis->FindBin(maxPt);
+        //FIX THE 1000 LIMIT
+        ClearBins(initial, -1, binlow, -1, -1);
+        ClearBins(initial, binhigh+1, -1, -1, -1);
+        pt1_axis->SetRange(binlow, binhigh);
+        initialJets.push_back(initial);
+    }
+    initial = initialJets[initialJets.size()-1];
+    pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
+    Double_t jet1, jet2, loss1, loss2, out1, out2; 
+
+    normalization /= JET_MEAN_LOSS;
+    Double_t coef1=normalization, coef2=normalization; 
+
+    TString name = "combined";
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* asym = new TH1F(name, title, 200, -1, 1);
+    if (x_j) {
+        SetAxes(asym, "x_j");
+    }
+    else {
+        SetAxes(asym, "A_j");
+    }
+    Int_t count = 0;
+    Int_t bin;
+    Int_t flavor_pair;
+    while (count < n_samples) {
+        jet1 = pt1_all->GetRandom();
+        bin = pt1_axis->FindBin(jet1);
+        flavor_pair = GetFlavorPair(bin, fracs);
+        pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
+        jet2 = pt2->GetRandom();
+        if (flavor_pair == GLUON_QUARK) {
+            coef1 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == QUARK_GLUON) {
+            coef2 = normalization*GLUON_RATIO;
+        }
+        else if (flavor_pair == GLUON_GLUON) { 
+            coef1 = normalization*GLUON_RATIO;
+            coef2 = normalization*GLUON_RATIO;
+        }
+        loss->GetRandom2(loss1, loss2);
+        out1 = jet1-coef1*loss1;
+        out2 = jet2-coef2*loss2;
+        asym->Fill(CalcAsymmetry(out1, out2, x_j));
+        count++;
+    }
+    return asym;
+}
+*/
+
 THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;

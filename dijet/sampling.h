@@ -42,6 +42,8 @@ TH2* SampleAsymmetry(TH2* jets, Int_t n_samples=100000, Bool_t x_j=X_J, Double_t
 
 TH1* SampleAsymmetryPYTHIA(TH2* initial, TH2* loss, Bool_t x_j=X_J, Int_t n_samples=10000, Double_t normalization=10.0, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt=100, Double_t maxPt=200); 
 
+TH1* SampleAsymmetryBDMPS(TH2* initial, TH3* loss, Bool_t x_j=X_J, Int_t n_samples=10000, Double_t qhatL=10.0, Int_t Flavor1=QUARK, Int_t Flavor2=QUARK, Double_t minPt=100, Double_t maxPt=200); 
+
 TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j=X_J, Int_t n_samples=10000, Double_t normalization=10.0, vector<TH1*> fracs = vector<TH1*>(), Double_t minPt=100, Double_t maxPt=200); 
 
 THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization=10.0, Double_t phi=-1.0, Double_t minPt=100.0, Double_t maxPt=200.0, Bool_t combined=true);
