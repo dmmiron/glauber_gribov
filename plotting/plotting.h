@@ -9,7 +9,7 @@
 
 void plotTHStack(THStack* hists, TString xtitle="", TString ytitle="", TString saveName="default.pdf", Bool_t asym=false);
 
-void MakePlots(vector<THStack*> stacks, TString xtitle, TString ytitle, TString save_path, Bool_t batch=true);
+void MakePlots(vector<THStack*> stacks, TString xtitle, TString ytitle, TString save_path, Bool_t batch=true, Bool_t asym=false);
 
 void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, Bool_t batch=true);
 

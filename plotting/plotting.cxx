@@ -55,7 +55,7 @@ void MakePlots(vector<THStack*> stacks, TString xtitle, TString ytitle, TString 
     gROOT->SetBatch(kFALSE);
 }
 
-void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, Bool_t batch) {
+void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, Bool_t batch, Bool_t asym) {
     save_path += "/";
     TString path;
     if (batch) {
@@ -69,7 +69,7 @@ void MakePlots(TMap* stacks, TString xtitle, TString ytitle, TString save_path, 
         stack = (THStack*)stacks->GetValue(key);
         //remove whitespace and commas, should not be necessary later after fix naming of files
         path = save_path + StripString(StripString(key->GetName(), " "), ",");
-        plotTHStack(stack, xtitle, ytitle, path);
+        plotTHStack(stack, xtitle, ytitle, path, asym);
     }
     gROOT->SetBatch(kFALSE);
 }
