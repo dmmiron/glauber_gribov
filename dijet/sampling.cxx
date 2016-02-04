@@ -28,6 +28,20 @@ TNtupleD* LoadJetsTuple(TString filename) {
     return jets;
 }
 
+TH3* LoadJetPairsRho0(TFile* f) {
+    TH3D* hist = new TH3D("jets", "jets rho0", 100, 0, 100, 100, 0, 100, 100, 0, 10);
+    TList *l = f->GetListOfKeys();
+    TString name = l->First()->GetName();
+    TNtupleD* tup = (TNtupleD*)f->Get(name);
+    tup->Draw("rho0:loss1:loss2>>jets", "", "goff");
+    hist->SetDirectory(0);
+    delete tup;
+    //TH2D* out = hist->Clone();
+    //delete hist;
+    return hist;
+    //return out;
+}
+
 TH2* LoadJetsRho0(TFile* f) {
     TH2D* hist = new TH2D("jets", "jets rho0", 100, 0, 100, 100, 0, 10);
     TList *l = f->GetListOfKeys();
@@ -41,6 +55,7 @@ TH2* LoadJetsRho0(TFile* f) {
     return hist;
     //return out;
 }
+
 
 TH2* LoadPYTHIA(Int_t flavor1, Int_t flavor2) {
     TFile* f = TFile::Open("~/initial/total.root");
@@ -486,16 +501,16 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
     else {
         SetAxes(asym, "A_j");
     }
-
     if (flavor1 == GLUON) {
-        qhatL1 = qhatL*GLUON_RATIO;
+        qhatL1 *= GLUON_RATIO;
     }
     if (flavor2 == GLUON) {
-        qhatL2 = qhatL*GLUON_RATIO;
+        qhatL2 *= GLUON_RATIO;
     }
     Int_t count = 0;
     Int_t bin1, bin2;
     while (count < n_samples) {
+        //cout << "Count: " << count << endl;
         initial->GetRandom2(jet1, jet2);
         loss->GetRandom3(intRhodl1, intRhodl2, rho0);
         L1 = intRhodl1/rho0;
@@ -642,8 +657,44 @@ count++;
 }
 return asym;
 }
-*/
 
+
+THStack* SweepFlavorBDMPS(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t qhatL, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
+    TFile* f = TFile::Open(lossFile);
+    TH3* loss = LoadJetPairsRho0(f);
+    TH2* initial;
+    TString stacktitle;
+    if (x_j) {
+        stacktitle = Form("x_j_BDMPS (b=%.1f, qhatL=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, qhatL, phi, minPt, maxPt);
+    }
+    else {
+        stacktitle = Form("A_j_BDMPS (b=%.1f, qhatL=%1.f, phi=%.1f, minPt=%.1f, maxPt=%.1f)", b, qhatL, phi, minPt, maxPt);
+    }
+    THStack *stack = new THStack("Jet Asymmetry", stacktitle); 
+    vector<TH2*> initialJets = vector<TH2*>();
+    //loop through quark, gluon combinations
+    for (Int_t i = 0; i<2; i++) {
+        for (Int_t j = 0; j<2; j++) {
+            initial = LoadPYTHIA(i, j);
+            initialJets.push_back(initial);
+            stack->Add(SampleAsymmetryBDMPS(initial, loss, x_j, nsamples, qhatL, i, j, minPt, maxPt));
+        }
+    }
+    
+    if (combined) {
+        vector<TH1*> fracs = LoadFracs("~/fractions.root");
+        initial = LoadPYTHIA(ALL, ALL);
+        initialJets.push_back(initial);
+        stack->Add(SampleAsymmetryBDMPS(initialJets, loss, x_j, nsamples, qhatL, fracs, minPt, maxPt));
+    }
+    for (vector<TH2*>::iterator it=initialJets.begin(); it !=initialJets.end(); ++it) {
+        delete *it;
+    }
+    delete loss;
+    f->Close();
+    return stack;
+}
+*/
 THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
@@ -676,9 +727,8 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, D
     delete loss;
     return stack;
 }
-
 /*
-   vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
+vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
    TList* files = GetFiles(dirname);
    files->Sort();
    THStack* hists;

@@ -294,7 +294,7 @@ Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Dou
 
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100);
 
-Double_t SampleEnergyLoss(Double_t alpha, Double_t omegac, Double_t maxEnergy);
+Double_t SampleEnergyLoss(TF1* dist, Double_t alpha, Double_t omegac, Double_t maxEnergy);
 
 TF1* GetEnergyLossDist(Double_t alpha, Double_t omegac);
 
