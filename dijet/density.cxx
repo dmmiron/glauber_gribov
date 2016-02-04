@@ -147,10 +147,16 @@ TF1* Collision::CalcJetIntegrand(Double_t alpha, Double_t x0, Double_t y0, Doubl
     //convert degrees to radians
 
     JetIntegrand *jInt = new JetIntegrand(fPPart);
-    //Temporary fix limit of integration at 100
     TF1* JetInt = new TF1("jInt", jInt, 0, INFTY, 4, "JetIntegrand"); 
     JetInt->SetParameters(alpha, x0, y0, phi);
     return JetInt;
+}
+
+TF1* Collision::CalcADSCFTIntegrand(Double_t x0, Double_t y0, Double_t phi, Double_t C) {
+    ADSCFTIntegrand *ADSCFTInt = new ADSCFTIntegrand(fPPart);
+    TF1* ADSCFT = new TF1("ADSCFTInt", ADSCFTInt, 0, INFTY, 4, "ADSCFTIntegrand");
+    ADSCFT->SetParameters(x0, y0, phi, C);
+    return ADSCFT;
 }
 /*
 Double_t Collision::CalcJet(Double_t alpha=1, Double_t x0=0, Double_t y0=0, Double_t phi=0) {

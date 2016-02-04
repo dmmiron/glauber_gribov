@@ -107,6 +107,7 @@ class Collision {
         TF2*        GetPPart()      const {return fPPart;}
         TF2*        GetRhoJet()     const {return fRhoJet;}
         TF1*        CalcJetIntegrand(Double_t alpha=0, Double_t x0=0, Double_t y0=0, Double_t phi=0);
+        TF1*        CalcADSCFTIntegrand(Double_t x0=0, Double_t y0=0, Double_t phi=0, Double_t c=1);
         //Double_t    CalcJet(Double_t alpha, Double_t x0, Double_t y0, Double_t phi);
         TF1*        JetOfPhi(Double_t alpha=0, Double_t x0=0, Double_t y0=0); 
         TNtupleD*        SampleJets(Int_t n=1000, Double_t alpha=0, Double_t xmin=-10, Double_t ymin=10, Double_t xmax=10, Double_t ymax=10); 
@@ -307,6 +308,14 @@ struct ADSCFTIntegrand {
         Double_t yy = l*sinPhi+x0;
         Double_t rho = fRho->Eval(xx, yy);
         Double_t rhoPow = pow(rho, 2.0/3.0);
+        cout << "xx: " << xx << "yy: " << yy << "rhoPow: " << rhoPow << "l: " << l << endl;
+        cout << param << endl;
+        cout << pow(l, 10.0/9.0) << endl;
+        cout << pow(l, 8.0/9.0) << endl;
+        cout << param*pow(l, 8.0/9.0) << endl; 
+        cout << param*pow(l, 8.0/9.0)/rhoPow << endl;
+        cout << param*pow(l, 8.0/9.0)/rhoPow - l*l << endl;
+
         return pow(l, 10.0/9.0)*rhoPow/(TMath::Sqrt(param*pow(l, 8.0/9.0)/rhoPow - l*l));
     }
     TF2* fRho;
