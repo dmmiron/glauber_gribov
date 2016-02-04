@@ -107,5 +107,7 @@ void CloseFiles(vector<TFile*> fs);
 void RebinDir(TString inputdir, TString outputdir, Int_t ngroup=2, Bool_t scale=true);
 
 void RebinFile(TString fname, TString inputdir, TString outputdir, Int_t ngroup, Bool_t scale);
+
+TH2* BDMPSLookupHist(Double_t minOmega_c = 0, Double_t maxOmega_c = 100, Int_t nbins = 100, Double_t alpha=ALPHA);
 #endif
 
