@@ -467,7 +467,7 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, In
 
 //lookup has Energy on Y axis and omega_c on x
 TH2* LoadBDMPSLookup(){
-    TFile* f = TFile::Open("BDMPSLookup.root");
+    TFile* f = TFile::Open("BDMPSIntegralHist.root");
     TH2* lookup = (TH2*) f->Get(f->GetListOfKeys()->First()->GetName());
     lookup->SetDirectory(0);
     f->Close();
@@ -510,7 +510,8 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
     Int_t count = 0;
     Int_t bin1, bin2;
     while (count < n_samples) {
-        //cout << "Count: " << count << endl;
+        cout << "Count: " << count << endl;
+        
         initial->GetRandom2(jet1, jet2);
         loss->GetRandom3(intRhodl1, intRhodl2, rho0);
         L1 = intRhodl1/rho0;
@@ -518,11 +519,15 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
         omegac1 = qhatL1*L1/2.0;
         omegac2 = qhatL2*L2/2.0;
         //subtract energy loss calculated using initial energy as upper bound
+        
         bin1 = lookup->GetXaxis()->FindBin(omegac1);
         bin2 = lookup->GetXaxis()->FindBin(omegac2);
-        out1 = jet1 - lookup->ProjectionY("_py", bin1, bin1+1)->GetRandom();
-        out2 = jet2 - lookup->ProjectionY("_py", bin1, bin1+1)->GetRandom();
+        cout << "before projection" << endl;
+        out1 = jet1 - lookup->ProjectionY("_py", bin1, bin1+10)->GetRandom();
+        out2 = jet2 - lookup->ProjectionY("_py", bin2, bin2+10)->GetRandom();
+        cout << "after projection" << endl;
         /* FOR DEBUGGING
+         
            if (count % 1000 == 0) {
            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
@@ -585,6 +590,7 @@ TH2* BDMPSLookupHist(Double_t minOmega_c, Double_t maxOmega_c, Int_t nbins, Doub
         lossDist->SetParameters(alpha, minOmega_c + i*omega_c_step);
         lossDist->SetRange(minEnergy, maxEnergy);
         cdf = GetCumulative(lossDist->GetHistogram(), true);
+        cdf->Scale(1/(cdf->Integral()));
         for (Int_t j = 0; j < energyBins; j++) {
             hist->Fill(i, j, cdf->GetBinContent(j));
         }

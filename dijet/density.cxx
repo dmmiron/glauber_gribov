@@ -622,6 +622,17 @@ Double_t CalcOmegac(Double_t L, Double_t qhat) {
     return L*L*qhat/2.0;
 }
 
+TF1* ADSCFTDistXStop(Double_t E_in, Double_t x_stop) {
+    TF1* dist = new TF1("ADSEnergyLoss", "-4*[0]*(x^2)/(TMath::Pi()*[1]^2*TMath::Sqrt([1]^2-x^2))", 0, x_stop);
+    dist->SetParameters(E_in, x_stop);
+    return dist;
+}
+
+TF1* ADSCFTDist(Double_t E_in, Double_t param) {
+    TF1* dist = new TF1("ADSEnergyLoss","-4*[0]*x^(10/9)/(TMath::Pi()*[1]*TMath::Sqrt([1]*x^(8/9)-x^2))", 0, TMath::Power(param, 8.0/9.0));
+    dist->SetParameters(E_in, param);
+    return dist;
+} 
 
 //Calculate an adjustment coefficent to make the ratio of quarks to gluons correct at the refernce Pt value
 //we chose to multiply the gluon distribution

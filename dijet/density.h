@@ -290,6 +290,28 @@ struct RhoJet {
     TF1* fTB;
 };
 
+struct ADSCFTIntegrand {
+    //takes in ppart which is 2d distribtution
+    ADSCFTIntegrand(TF2* rho): fRho(rho) {}
+    Double_t operator() (Double_t *x, Double_t *par) {
+        Double_t x0 = par[0];
+        Double_t y0 = par[1];
+        Double_t phi = par[2];
+        phi = phi*TMath::Pi()/180.0;
+        //Double_t E_in = par[3]; // probably take this out
+        Double_t param = par[3];
+        Double_t l = x[0];
+        Double_t cosPhi = TMath::Cos(phi);
+        Double_t sinPhi = TMath::Sin(phi);
+        Double_t xx = l*cosPhi+x0;
+        Double_t yy = l*sinPhi+x0;
+        Double_t rho = fRho->Eval(xx, yy);
+        Double_t rhoPow = pow(rho, 2.0/3.0);
+        return pow(l, 10.0/9.0)*rhoPow/(TMath::Sqrt(param*pow(l, 8.0/9.0)/rhoPow - l*l));
+    }
+    TF2* fRho;
+};
+
 Double_t CalcMoment2(TF2* f, Double_t nx, Double_t ny, Double_t xmin = -100, Double_t xmax = 100, Double_t ymin = -100, Double_t ymax = 100); 
 
 Double_t Eccentricity(TF2 *f, Double_t xmin=-100, Double_t xmax=100, Double_t ymin=-100, Double_t ymax = 100);
@@ -303,6 +325,10 @@ TF1* GetEnergyLossDist(Double_t alpha, Double_t L, Double_t qhat);
 Double_t GetEnergyLossMean(Double_t alpha, Double_t omegac, Double_t maxJetEnergy);
 
 Double_t GetEnergyLossMean(Double_t alpha, Double_t L, Double_t qhat, Double_t maxJetEnergy);
+
+TF1* ADSCFTDistXStop(Double_t E_in, Double_t x_stop);
+
+TF1* ADSCFTDist(Double_t E_in, Double_t param);
 
 Double_t CalcOmegac(Double_t L, Double_t qhat);
 
