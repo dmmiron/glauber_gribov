@@ -372,6 +372,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
     temp = new TH1F("DifferenceSpectrumTemp", "DifferenceTemp", maxPt, 0, maxPt);
     Double_t unquenchedE, energyLoss, intRhodl, rho0, L;
     rho0 = 1;
+    TF1* lossDist = GetEnergyLossDist(ALPHA, 0.0);
     while (startPt < maxPt) { 
         scale = unquenchedTF->Integral(startPt,SAMPLE_COEF*startPt)/unquenchedTF->Integral(minPt, SAMPLE_COEF*minPt);
         while (count < n_samples) {
@@ -385,7 +386,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
                 L = intRhodl/rho0;
                 omegac = qhatL*L/2.0;
                 //cout << "L : " << L << " omegac: " << omegac << endl;
-                energyLoss = SampleEnergyLoss(ALPHA, omegac, unquenchedE);
+                energyLoss = SampleEnergyLoss(lossDist, ALPHA, omegac, unquenchedE);
                 //cout << "energyLoss: " << energyLoss << endl;
 
                 difference = unquenchedE - energyLoss;
@@ -401,6 +402,7 @@ TH1* Collision::DifferenceSpectrum(Int_t n_samples, Double_t minPt, Double_t max
         temp->Reset();
         startPt = startPt*SAMPLE_COEF;
     }
+    delete lossDist;
     delete unquenchedTF;
     delete unquenched;
     delete temp;
@@ -482,6 +484,8 @@ TH1* Collision::QGSpectraRatio(Int_t n_samples, TH1* jets, Double_t normalizatio
 
     numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
+    numerator->Write();
+    denominator->Write();
     cout << "before q_ratio" << endl;
     q_ratio->Divide(differenceQuark, unquenchedQuark);
     cout << "before g_ratio" << endl;
@@ -519,6 +523,8 @@ TH1* Collision::QGSpectraRatioBDMPS(Int_t n_samples, TH2* jets, Double_t qhatL, 
 
     numerator->Add(differenceQuark, differenceGluon, 1, gCoef);
     denominator->Add(unquenchedQuark, unquenchedGluon, 1, gCoef);
+    numerator->Write();
+    denominator->Write();
     cout << "before q_ratio" << endl;
     q_ratio->Divide(differenceQuark, unquenchedQuark);
     cout << "before g_ratio" << endl;
@@ -570,15 +576,14 @@ Double_t Collision::CalcOmegac(Double_t qhatL, Double_t x, Double_t y, Double_t 
     return L*qhatL/2.0;
 }
 
-Double_t SampleEnergyLoss(Double_t alpha, Double_t omegac, Double_t maxEnergy) {
-    TF1* dist = GetEnergyLossDist(alpha, omegac);
+Double_t SampleEnergyLoss(TF1* dist, Double_t alpha, Double_t omegac, Double_t maxEnergy) {
+    dist->SetParameters(alpha, omegac);
     dist->SetRange(0, maxEnergy);
     Double_t out = dist->GetRandom();
     if (out == 0) {
         cerr << "maxEnergy: " << maxEnergy << "omegac: " << omegac << endl;
         cerr << "energy loss: " << out << endl;
     }
-    delete dist;
     return out;
 }
 
