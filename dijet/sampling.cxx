@@ -478,8 +478,6 @@ TH2* LoadBDMPSLookup(){
 TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_samples, Double_t qhatL, Int_t flavor1, Int_t flavor2, Double_t minPt, Double_t maxPt) {
     TH2* initial = (TH2*)initial_in->Clone();
     TH2* lookup = LoadBDMPSLookup();
-    Int_t omega_c_divs = lookup->GetNbinsX();
-    Double_t omega_c_width = lookup->GetXaxis()->GetBinWidth(0);
 
     TAxis* pt1 = initial->GetXaxis();
     Int_t binlow = pt1->FindBin(minPt);
@@ -511,7 +509,7 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
     Int_t binx1, binx2, biny1, biny2;
     TF1* uniform = new TF1("uniform", "1", 0, 1);
     while (count < n_samples) {
-        
+
         initial->GetRandom2(jet1, jet2);
         loss->GetRandom3(intRhodl1, intRhodl2, rho0);
         L1 = intRhodl1/rho0;
@@ -519,7 +517,7 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
         omegac1 = qhatL1*L1/2.0;
         omegac2 = qhatL2*L2/2.0;
         //subtract energy loss calculated using initial energy as upper bound
-        
+
         binx1 = lookup->GetXaxis()->FindBin(omegac1);
         binx2 = lookup->GetXaxis()->FindBin(omegac2);
         biny1 = lookup->GetYaxis()->FindBin(uniform->GetRandom());
@@ -527,7 +525,7 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
         out1 = jet1 - lookup->GetBinContent(binx1, biny1);
         out2 = jet2 - lookup->GetBinContent(binx2, biny2);
         /* FOR DEBUGGING
-         
+
            if (count % 1000 == 0) {
            cout << "jet1: " << jet1 << " loss1: " << loss1 << endl;
            cout << "jet2: " << jet2 << " loss2: " << loss2 << endl;
@@ -596,11 +594,11 @@ TH2* BDMPSLookupHist(Double_t minOmega_c, Double_t maxOmega_c, Int_t nbins, Doub
         graph = Invert(cdf); 
         for (Int_t j = 0; j <= energyBins; j++) {
             /*
-            cout << "x: " <<  (j)*energyStep << endl;
-            cout << "eval: " << graph->Eval(j*energyStep) << endl;
-            cout << "i: " << i << endl;
-            cout << "j: " << j << endl;
-            */
+               cout << "x: " <<  (j)*energyStep << endl;
+               cout << "eval: " << graph->Eval(j*energyStep) << endl;
+               cout << "i: " << i << endl;
+               cout << "j: " << j << endl;
+               */
             hist->SetBinContent(i, j, graph->Eval((j)*energyStep));
         }
     }
@@ -619,77 +617,92 @@ TGraph* Invert(TH1* hist) {
         x = axis->GetBinCenter(i);
         y = hist->GetBinContent(i);
         /*cout << "i: " << i << endl;
-        cout << "x: " << x << endl;
-        cout << "y: " << y << endl;
-        */
+          cout << "x: " << x << endl;
+          cout << "y: " << y << endl;
+          */
         graph->SetPoint(i, y, x);
     }
     return graph;
 }
 
-/*
-   TH1* SampleAsymmetryBDMPS(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, Int_t n_samples, Double_t normalization, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
-   vector<TH2*> initialJets = vector<TH2*>();
-   TH2* initial;
-   TH2* temp;
-   TH1* pt1_all;
-   TH1* pt2;
-   TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
-   Int_t binlow, binhigh;
-   for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
-   temp = *it;
-   initial = (TH2*)temp->Clone();
-   pt1_axis = initial->GetXaxis();
-   binlow = pt1_axis->FindBin(minPt);
-   binhigh = pt1_axis->FindBin(maxPt);
-//FIX THE 1000 LIMIT
-ClearBins(initial, -1, binlow, -1, -1);
-ClearBins(initial, binhigh+1, -1, -1, -1);
-pt1_axis->SetRange(binlow, binhigh);
-initialJets.push_back(initial);
-}
-initial = initialJets[initialJets.size()-1];
-pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
-Double_t jet1, jet2, loss1, loss2, out1, out2; 
 
-normalization /= JET_MEAN_LOSS;
-Double_t coef1=normalization, coef2=normalization; 
+TH1* SampleAsymmetryBDMPS(vector<TH2*> initialJetsIn, TH3* loss, Bool_t x_j, Int_t n_samples, Double_t qhatL, vector<TH1*> fracs, Double_t minPt, Double_t maxPt) {
+    vector<TH2*> initialJets = vector<TH2*>();
+    TH2* initial;
+    TH2* temp;
+    TH1* pt1_all;
+    TH1* pt2;
+    TAxis* pt1_axis = initialJetsIn[0]->GetXaxis();
+    TH2* lookup = LoadBDMPSLookup();
+    Int_t binlow, binhigh;
+    for (vector<TH2*>::iterator it = initialJetsIn.begin(); it != initialJetsIn.end(); ++it) {
+        temp = *it;
+        initial = (TH2*)temp->Clone();
+        pt1_axis = initial->GetXaxis();
+        binlow = pt1_axis->FindBin(minPt);
+        binhigh = pt1_axis->FindBin(maxPt);
+        //FIX THE 1000 LIMIT
+        ClearBins(initial, -1, binlow, -1, -1);
+        ClearBins(initial, binhigh+1, -1, -1, -1);
+        pt1_axis->SetRange(binlow, binhigh);
+        initialJets.push_back(initial);
+    }
+    initial = initialJets[initialJets.size()-1];
+    pt1_all = initialJets[initialJets.size()-1]->ProjectionX("pt1_all");
+    Double_t jet1, jet2, intRhodl1, intRhodl2, loss1, loss2, out1, out2; 
 
-TString name = "combined";
-TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
-TH1* asym = new TH1F(name, title, 200, -1, 1);
-if (x_j) {
-SetAxes(asym, "x_j");
-}
-else {
-SetAxes(asym, "A_j");
-}
-Int_t count = 0;
-Int_t bin;
-Int_t flavor_pair;
-while (count < n_samples) {
-jet1 = pt1_all->GetRandom();
-bin = pt1_axis->FindBin(jet1);
-flavor_pair = GetFlavorPair(bin, fracs);
-pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
-jet2 = pt2->GetRandom();
-if (flavor_pair == GLUON_QUARK) {
-coef1 = normalization*GLUON_RATIO;
-}
-else if (flavor_pair == QUARK_GLUON) {
-coef2 = normalization*GLUON_RATIO;
-}
-else if (flavor_pair == GLUON_GLUON) { 
-coef1 = normalization*GLUON_RATIO;
-coef2 = normalization*GLUON_RATIO;
-}
-loss->GetRandom2(loss1, loss2);
-out1 = jet1-coef1*loss1;
-out2 = jet2-coef2*loss2;
-asym->Fill(CalcAsymmetry(out1, out2, x_j));
-count++;
-}
-return asym;
+    Double_t qhatL1=qhatL, qhatL2=qhatL; 
+
+    TString name = "combined";
+    TString title = TString::Format("pt_[%.2f, %.2f]", minPt, maxPt);
+    TH1* asym = new TH1F(name, title, 200, -1, 1);
+    if (x_j) {
+        SetAxes(asym, "x_j");
+    }
+    else {
+        SetAxes(asym, "A_j");
+    }
+    Int_t count = 0;
+    Int_t bin;
+    Int_t flavor_pair;
+    Double_t L1, L2, omegac1, omegac2, rho0;
+    Int_t binx1, binx2, biny1, biny2;
+    TF1* uniform = new TF1("uniform", "1", 0, 1);
+    while (count < n_samples) {
+        jet1 = pt1_all->GetRandom();
+        bin = pt1_axis->FindBin(jet1);
+        flavor_pair = GetFlavorPair(bin, fracs);
+        pt2 = initialJetsIn[flavor_pair]->ProjectionY("proj_y", bin, bin+1);
+        jet2 = pt2->GetRandom();
+        if (flavor_pair == GLUON_QUARK) {
+            qhatL1 = qhatL*GLUON_RATIO;
+        }
+        else if (flavor_pair == QUARK_GLUON) {
+            qhatL2 = qhatL*GLUON_RATIO;
+        }
+        else if (flavor_pair == GLUON_GLUON) { 
+            qhatL1 = qhatL*GLUON_RATIO;
+            qhatL2 = qhatL*GLUON_RATIO;
+        }
+
+        loss->GetRandom3(intRhodl1, intRhodl2, rho0);
+        L1 = intRhodl1/rho0;
+        L2 = intRhodl2/rho0;
+        omegac1 = qhatL1*L1/2.0;
+        omegac2 = qhatL2*L2/2.0;
+        //subtract energy loss calculated using initial energy as upper bound
+
+        binx1 = lookup->GetXaxis()->FindBin(omegac1);
+        binx2 = lookup->GetXaxis()->FindBin(omegac2);
+        biny1 = lookup->GetYaxis()->FindBin(uniform->GetRandom());
+        biny2 = lookup->GetYaxis()->FindBin(uniform->GetRandom());
+        out1 = jet1 - lookup->GetBinContent(binx1, biny1);
+        out2 = jet2 - lookup->GetBinContent(binx2, biny2);
+
+        asym->Fill(CalcAsymmetry(out1, out2, x_j));
+        count++;
+    }
+    return asym;
 }
 
 
@@ -714,7 +727,7 @@ THStack* SweepFlavorBDMPS(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t
             stack->Add(SampleAsymmetryBDMPS(initial, loss, x_j, nsamples, qhatL, i, j, minPt, maxPt));
         }
     }
-    
+
     if (combined) {
         vector<TH1*> fracs = LoadFracs("~/fractions.root");
         initial = LoadPYTHIA(ALL, ALL);
@@ -728,7 +741,7 @@ THStack* SweepFlavorBDMPS(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t
     f->Close();
     return stack;
 }
-*/
+
 THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, Double_t normalization, Double_t phi, Double_t minPt, Double_t maxPt, Bool_t combined) {
     TH2* loss = (TH2*)LoadJets(lossFile);
     TH2* initial;
@@ -762,7 +775,7 @@ THStack* SweepFlavor(TString lossFile, Int_t nsamples, Bool_t x_j, Double_t b, D
     return stack;
 }
 /*
-vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
+   vector<THStack*> SweepDir(TString dirname, Int_t nsamples, Bool_t x_j, vector<Double_t> fracs, Double_t normalization, Double_t minPt, Double_t maxPt) {
    TList* files = GetFiles(dirname);
    files->Sort();
    THStack* hists;
