@@ -4,6 +4,7 @@
 #include "density.h"
 #include <THStack.h>
 #include <TH3.h>
+#include <TGraph.h>
 #include <cstdlib>
 #include <map>
 #include <TNtuple.h>
@@ -115,5 +116,7 @@ void RebinDir(TString inputdir, TString outputdir, Int_t ngroup=2, Bool_t scale=
 void RebinFile(TString fname, TString inputdir, TString outputdir, Int_t ngroup, Bool_t scale);
 
 TH2* BDMPSLookupHist(Double_t minOmega_c = 0, Double_t maxOmega_c = 100, Int_t nbins = 100, Double_t alpha=ALPHA);
+
+TGraph* Invert(TH1* hist);
 #endif
 

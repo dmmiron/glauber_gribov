@@ -342,4 +342,5 @@ TF1* ADSCFTDist(Double_t E_in, Double_t param);
 Double_t CalcOmegac(Double_t L, Double_t qhat);
 
 Double_t GluonFracCoef(Double_t f0, TH1* quarks, TH1* gluons, Double_t refE=25.0);
+
 #endif

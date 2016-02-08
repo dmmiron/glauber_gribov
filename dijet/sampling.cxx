@@ -467,7 +467,7 @@ TH1* SampleAsymmetryPYTHIA(vector<TH2*> initialJetsIn, TH2* loss, Bool_t x_j, In
 
 //lookup has Energy on Y axis and omega_c on x
 TH2* LoadBDMPSLookup(){
-    TFile* f = TFile::Open("BDMPSIntegralHist.root");
+    TFile* f = TFile::Open("BDMPSLookupHist.root");
     TH2* lookup = (TH2*) f->Get(f->GetListOfKeys()->First()->GetName());
     lookup->SetDirectory(0);
     f->Close();
@@ -508,9 +508,9 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
         qhatL2 *= GLUON_RATIO;
     }
     Int_t count = 0;
-    Int_t bin1, bin2;
+    Int_t binx1, binx2, biny1, biny2;
+    TF1* uniform = new TF1("uniform", "1", 0, 1);
     while (count < n_samples) {
-        cout << "Count: " << count << endl;
         
         initial->GetRandom2(jet1, jet2);
         loss->GetRandom3(intRhodl1, intRhodl2, rho0);
@@ -520,12 +520,12 @@ TH1* SampleAsymmetryBDMPS(TH2* initial_in, TH3* loss, Bool_t x_j, Int_t n_sample
         omegac2 = qhatL2*L2/2.0;
         //subtract energy loss calculated using initial energy as upper bound
         
-        bin1 = lookup->GetXaxis()->FindBin(omegac1);
-        bin2 = lookup->GetXaxis()->FindBin(omegac2);
-        cout << "before projection" << endl;
-        out1 = jet1 - lookup->ProjectionY("_py", bin1, bin1+10)->GetRandom();
-        out2 = jet2 - lookup->ProjectionY("_py", bin2, bin2+10)->GetRandom();
-        cout << "after projection" << endl;
+        binx1 = lookup->GetXaxis()->FindBin(omegac1);
+        binx2 = lookup->GetXaxis()->FindBin(omegac2);
+        biny1 = lookup->GetYaxis()->FindBin(uniform->GetRandom());
+        biny2 = lookup->GetYaxis()->FindBin(uniform->GetRandom());
+        out1 = jet1 - lookup->GetBinContent(binx1, biny1);
+        out2 = jet2 - lookup->GetBinContent(binx2, biny2);
         /* FOR DEBUGGING
          
            if (count % 1000 == 0) {
@@ -580,23 +580,51 @@ TH2* BDMPSLookupHist(Double_t minOmega_c, Double_t maxOmega_c, Int_t nbins, Doub
     TH1* temp;
     Double_t omega_c_step = (maxOmega_c - minOmega_c)/nbins;
     Double_t minEnergy = 0;
-    Double_t maxEnergy = 1000;
+    Double_t maxEnergy = 500;
     Double_t energyBins = 10000;
+    Double_t energyStep = 1.0/energyBins;
     lossDist->SetNpx(energyBins);
 
-    TH2* hist = new TH2F("lookup", "BDMPS Lookup", nbins, minOmega_c, maxOmega_c, energyBins, minEnergy, maxEnergy);
+    TH2* hist = new TH2F("lookup", "BDMPS Lookup", nbins, minOmega_c, maxOmega_c, energyBins, 0, 1);
+    TGraph* graph;
 
-    for (Int_t i = 0; i < nbins; i++) {
+    for (Int_t i = 0; i <= nbins; i++) {
         lossDist->SetParameters(alpha, minOmega_c + i*omega_c_step);
         lossDist->SetRange(minEnergy, maxEnergy);
         cdf = GetCumulative(lossDist->GetHistogram(), true);
-        cdf->Scale(1/(cdf->Integral()));
-        for (Int_t j = 0; j < energyBins; j++) {
-            hist->Fill(i, j, cdf->GetBinContent(j));
+        cdf->Scale(1/cdf->GetBinContent(cdf->GetXaxis()->GetNbins()-1));
+        graph = Invert(cdf); 
+        for (Int_t j = 0; j <= energyBins; j++) {
+            /*
+            cout << "x: " <<  (j)*energyStep << endl;
+            cout << "eval: " << graph->Eval(j*energyStep) << endl;
+            cout << "i: " << i << endl;
+            cout << "j: " << j << endl;
+            */
+            hist->SetBinContent(i, j, graph->Eval((j)*energyStep));
         }
     }
     return hist;
 
+}
+
+TGraph* Invert(TH1* hist) {
+    TAxis* axis = hist->GetXaxis();
+    Int_t nbins = axis->GetNbins();
+    TGraph* graph = new TGraph(nbins);
+    Double_t x;
+    Double_t y;
+
+    for (Int_t i = 1; i < nbins; i++) {
+        x = axis->GetBinCenter(i);
+        y = hist->GetBinContent(i);
+        /*cout << "i: " << i << endl;
+        cout << "x: " << x << endl;
+        cout << "y: " << y << endl;
+        */
+        graph->SetPoint(i, y, x);
+    }
+    return graph;
 }
 
 /*
